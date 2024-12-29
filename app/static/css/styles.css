@@ -1,0 +1,731 @@
+/* Earth Day Themed CSS */
+/* Adapted verbosely from an existing cyberpunk theme to reflect Earth Day colors and motifs. */
+
+:root {
+    /* 
+       Below are color variables chosen to evoke a natural, earthy palette:
+       --primary-color: A pleasant “leafy” green.
+       --secondary-color: A deeper green or brown for contrast.
+       --text-color: A dark earthy tone for comfortable reading on a light background.
+       --text-color-secondary: A muted shade for secondary text.
+       --background-color: A soft, pale green or near-mint shade suggesting fresh foliage.
+       --accent-color: A green accent repeated in interactive or highlighted elements.
+       --highlight-color: A slightly lighter green for hover or selection states.
+    */
+    --primary-color: #6BBF59;
+    --secondary-color: #2F4A05;
+    --text-color: #3E3C1D;
+    --text-color-secondary: #666644;
+    --background-color: #F1FBEF;
+    --accent-color: #6BBF59;
+    --highlight-color: #AEE1A8;
+    
+    font-family: 'Orbitron', sans-serif; /* Kept from original – feel free to change if desired */
+    line-height: 1.5;
+    font-weight: 400;
+    color-scheme: light; /* Earth Day themes are typically associated with light backgrounds */
+    color: var(--text-color);
+    background-color: var(--background-color);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /* Some basic resets and sizing to avoid overflow issues */
+}
+
+body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 320px;
+    min-height: 100vh;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    overflow-x: hidden;
+    padding-top: 80px; /* Maintains the top space for nav, just as in original code */
+}
+
+/* Apply box-sizing to all elements (optional but often helpful) */
+*, *::before, *::after {
+    box-sizing: inherit;
+}
+
+.container {
+    max-width: 1200px; /* Or whichever width you prefer */
+    margin: 0 auto;    /* Centers the container horizontally */
+    padding: 1rem;     /* Optional padding to give content some spacing from edges */
+}
+
+/* Optionally, you can define responsive behavior with media queries */
+@media (max-width: 768px) {
+    .container {
+        max-width: 95%; /* Instead of a fixed px dimension, use something flexible */
+        padding: 0.5rem;
+    }
+}
+
+h1 {
+    font-size: 3.5em;
+    line-height: 1.1;
+    color: var(--accent-color);
+    /*
+       Reduced the intense neon-like glow to a more subtle shadow here.
+       You could also remove text-shadow entirely for an even more subdued look.
+    */
+    text-shadow: 0 0 6px var(--accent-color);
+}
+
+h2 {
+    font-size: 2.5em;
+    color: var(--accent-color);
+    text-shadow: 0 0 6px var(--accent-color);
+    margin-bottom: 0.5em;
+}
+
+p {
+    font-size: 1.2em;
+    line-height: 1.6;
+    /* Switched to the secondary text color for paragraph text to soften the reading experience */
+    color: var(--text-color-secondary);
+}
+
+a {
+    font-weight: 500;
+    color: var(--primary-color);
+    text-decoration: none;
+    /* Subtle text-shadow effect using the Earth Day accent color */
+    text-shadow: 0 0 3px var(--primary-color);
+    transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+a:hover {
+    color: var(--highlight-color);
+    text-shadow: 0 0 6px var(--highlight-color);
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5em;
+    font-size: 1.1em;
+    color: var(--text-color);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="number"],
+textarea {
+    padding: 0.5em; /* Same padding for both */
+    border: 2px solid var(--accent-color); /* Same border style */
+    border-radius: 5px; /* Consistent border radius */
+    font-size: 1em; /* Same font size */
+    width: 100%; /* Same width */
+    box-sizing: border-box; /* Ensure consistent box-sizing */
+    background-color: transparent; /* Same background color */
+    color: var(--text-color); /* Same text color */
+    margin-bottom: 1em; /* Same spacing */
+}
+
+/* Focus styles for input and textarea */
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="number"]:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--highlight-color);
+    box-shadow: 0 0 5px var(--highlight-color);
+}
+
+/* Placeholder styling for both input and textarea */
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-color-secondary);
+    font-style: italic;
+    font-size: 1em;
+}
+
+/* Ensure resizable textareas behave similarly */
+textarea {
+    resize: vertical; /* Allow vertical resizing only */
+    min-height: 120px; /* Set a default minimum height */
+}
+
+/* Unified placeholder styling for all form-control fields */
+.form-control::placeholder {
+    font-family: 'Orbitron', sans-serif; /* Ensure consistent font family */
+    font-style: italic; /* Apply a consistent italic style */
+    font-size: 1rem; /* Set a consistent font size */
+    color: var(--text-color-secondary); /* Match the secondary text color */
+    opacity: 1; /* Ensure full visibility for all placeholders */
+}
+
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    appearance: textfield;
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
+    margin: 0;
+}
+
+::selection {
+    background-color: var(--accent-color);
+    color: var(--secondary-color);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 2em;
+    /*
+       Using a gentle background color for table rows.
+       The subtle box-shadow remains for a slight raised or “card-like” effect.
+    */
+    background-color: rgba(107, 191, 89, 0.05);
+    box-shadow: 0 0 10px rgba(107, 191, 89, 0.2);
+    border-radius: 10px;
+}
+
+th,
+td {
+    padding: 1em;
+    border-bottom: 1px solid var(--accent-color);
+    text-align: center;
+    font-size: 1.1em;
+}
+
+th {
+    /* Darker background for header rows; accent color for text */
+    background-color: var(--secondary-color);
+    color: var(--accent-color);
+}
+
+td {
+    color: var(--text-color-secondary);
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: rgba(241, 251, 239, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 1em 0;
+    box-shadow: 0 0 10px rgba(107, 191, 89, 0.2);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+nav ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    gap: 2em;
+}
+
+nav a {
+    /* Reuse accent color for nav links; subtle highlight color on hover */
+    color: var(--accent-color);
+    font-size: 1.2em;
+    text-decoration: none;
+    text-shadow: 0 0 3px var(--accent-color);
+    transition: color 0.3s ease, text-shadow 0.3s ease;
+    position: relative;
+}
+
+nav a:hover {
+    color: var(--text-color);
+    text-shadow: 0 0 6px var(--text-color);
+}
+
+nav a::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -3px;
+    height: 2px;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0),
+        var(--accent-color),
+        rgba(255, 255, 255, 0)
+    );
+    transition: height 0.3s ease;
+}
+
+nav a:hover::after {
+    height: 5px;
+}
+
+button,
+select {
+    border-radius: 8px;
+    border: 2px solid var(--accent-color);
+    padding: 0.6em 1.2em;
+    font-size: 1.1em;
+    font-weight: bold;
+    font-family: inherit;
+    background-color: transparent;
+    color: var(--accent-color);
+    cursor: pointer;
+    transition: background-color 0.25s, transform 0.25s;
+    /* Slightly muted text shadow to keep the design subtle */
+    text-shadow: 0 0 5px var(--accent-color);
+}
+
+button:hover,
+select:hover {
+    background-color: var(--accent-color);
+    color: var(--secondary-color);
+    transform: translateY(-3px);
+}
+
+button:focus,
+button:focus-visible {
+    outline: 4px solid var(--accent-color);
+}
+
+.icon-button {
+    border-radius: 8px;
+    border: 2px solid var(--accent-color);
+    padding: 0.6em 1.2em;
+    font-size: 1.1em;
+    font-weight: bold;
+    font-family: inherit;
+    background-color: transparent;
+    color: var(--accent-color);
+    cursor: pointer;
+    transition: background-color 0.25s, transform 0.25s;
+    text-shadow: 0 0 5px var(--accent-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.icon-button:hover {
+    background-color: var(--accent-color);
+    color: var(--secondary-color);
+    transform: translateY(-3px);
+}
+
+.icon-button:focus,
+.icon-button:focus-visible {
+    outline: 4px solid var(--accent-color);
+}
+
+
+.carousel-container {
+    margin-top: 30px;
+    overflow: hidden;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.carousel {
+    display: flex;
+    gap: 15px;
+    width: 90%;
+    overflow: scroll;
+    position: relative;
+    white-space: nowrap;
+}
+
+.carousel-item {
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    flex-shrink: 0;
+    transition: transform 0.5s ease-in-out;
+    display: inline-block;
+}
+
+@media screen and (max-width: 1080px) {
+    /* Force the carousel into a vertical stack */
+    .carousel {
+        display: flex;
+        flex-direction: column; /* Stack items vertically */
+        gap: 15px; 
+        white-space: normal;    /* Instead of nowrap */
+        overflow-x: hidden;     /* No horizontal scroll */
+        overflow-y: auto;       /* Vertical scroll if needed */
+        max-height: 80vh;       /* Optional: prevent the stack from being too tall */
+    }
+
+    /* Make each item fill the container width */
+    .carousel-item {
+        max-width: 25%;        /* Full width */
+        width: 100%;
+        display: block;         /* or inline-block is okay too, but block ensures 100% width usage */
+        margin: 0 auto;         /* center the item if needed */
+    }
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1050;
+    background-color: rgba(0, 0, 0, 0.8);
+    overflow: hidden; /* Prevent page scroll */
+}
+
+.modal.show {
+    display: block;
+}
+
+.modal-content {
+    position: relative;
+    margin: auto;
+    max-width: 90%;
+    max-height: 90%;
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    flex-shrink: 0;
+}
+
+.modal-header .custom-close-btn {
+    background-color: red; /* Red background */
+    color: white; /* White "X" */
+    font-size: 1.25rem; /* Adjust font size */
+    line-height: 1; /* Adjust line height */
+    border: none; /* Remove border */
+    border-radius: 50%; /* Make it circular */
+    width: 30px; /* Set size */
+    height: 30px; /* Set size */
+    text-align: center; /* Center the "X" */
+    cursor: pointer; /* Change cursor on hover */
+    padding: 0;
+}
+
+.modal-header .custom-close-btn:hover {
+    background-color: darkred; /* Darker red on hover */
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.modal-body {
+    padding: 0;
+    flex-grow: 1; /* Allow body to expand and take available space */
+    overflow-y: auto; /* Enable vertical scrolling for the modal body */
+}
+
+.modal-body img {
+    width: 100%;
+    height: auto;
+    object-fit: contain; /* Maintain aspect ratio */
+}
+
+.rank-item {
+    display: flex; /* Make the item a flex container */
+    gap: 1rem; /* Add space between the thumbnail and the info */
+    align-items: flex-start; /* Align items to the top */
+    justify-content: flex-start; /* Align items horizontally */
+    flex-direction: row; /* Ensure horizontal alignment (default, but explicitly stated) */
+    width: 100%; /* Ensure the container spans the full width */
+}
+
+.thumbnail-container {
+    max-width: 200px; /* Limit the width of the thumbnail */
+    flex-shrink: 0; /* Prevent the thumbnail from shrinking */
+}
+
+.artwork-thumbnail {
+    width: 100%; /* Make the thumbnail fill its container */
+    height: auto; /* Maintain aspect ratio */
+    border: 2px solid #ddd; /* Add a light border */
+    border-radius: 5px; /* Rounded corners */
+}
+
+.info-container {
+    flex-grow: 1; /* Allow the info to take the remaining space */
+    text-align: left; /* Align text to the left */
+}
+
+
+.badge-table {
+    width: 100%; /* Full width table */
+    border-collapse: collapse; /* Ensure borders are merged */
+    margin-top: 2em; /* Add space above the table */
+    background-color: rgba(255, 255, 255, 0.8); /* Slightly transparent background */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    border: 1px solid var(--secondary-color); /* Border around the table */
+}
+
+.badge-table th,
+.badge-table td {
+    padding: 1em; /* Add padding to cells */
+    text-align: left; /* Left align text by default */
+    border: 1px solid var(--accent-color); /* Borders between rows and columns */
+    font-size: 1.1em; /* Adjust font size for readability */
+}
+
+.badge-table th {
+    background-color: var(--secondary-color); /* Darker header row */
+    color: var(--accent-color); /* Light text color for header */
+    text-align: center; /* Center align header text */
+}
+
+.badge-table td.badge-name {
+    text-align: right; /* Align badge names to the right */
+    font-weight: bold; /* Make badge names bold */
+    color: var(--text-color); /* Main text color */
+}
+
+.badge-table td.badge-description {
+    text-align: left; /* Align descriptions to the left */
+    color: var(--text-color-secondary); /* Secondary text color for descriptions */
+}
+
+.badge-table tr:nth-child(even) {
+    background-color: var(--background-color); /* Alternate row coloring */
+}
+
+/* Video Modal */
+/* Video Modal */
+#videoModal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1050;
+    background-color: rgba(0, 0, 0, 0.8);
+    overflow-y: auto; /* Allow page scrolling */
+}
+
+#videoModal.show {
+    display: block;
+}
+
+#videoModal .modal-content {
+    position: relative;
+    margin: 50px auto; /* Add space between modal and top of the page */
+    max-width: 80%;
+    max-height: 80%;
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+#videoModal .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    flex-shrink: 0;
+}
+
+#videoModal .modal-header .custom-close-btn {
+    background-color: red; /* Red background */
+    color: white; /* White "X" */
+    font-size: 1.25rem; /* Adjust font size */
+    line-height: 1; /* Adjust line height */
+    border: none; /* Remove border */
+    border-radius: 50%; /* Make it circular */
+    width: 30px; /* Set size */
+    height: 30px; /* Set size */
+    text-align: center; /* Center the "X" */
+    cursor: pointer; /* Change cursor on hover */
+    padding: 0;
+}
+
+#videoModal .modal-header .custom-close-btn:hover {
+    background-color: darkred; /* Darker red on hover */
+}
+
+#videoModal .modal-title {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--text-color);
+}
+
+#videoModal .modal-body {
+    padding: 1rem;
+    flex-grow: 1; /* Allow body to expand and take available space */
+    overflow-y: auto; /* Make modal content scrollable */
+}
+
+#informationalVideo {
+    width: 100%;
+    height: auto;
+    border-radius: 5px;
+}
+
+input[type="file"] {
+    display: inline-block;
+    padding: 0.5em 1em;
+    font-size: 1em;
+    color: var(--text-color);
+    background-color: transparent;
+    border: 2px solid var(--accent-color);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+input[type="file"]::file-selector-button {
+    padding: 0.4em 0.8em;
+    font-size: 1em;
+    background-color: var(--accent-color);
+    color: var(--secondary-color);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+input[type="file"]::file-selector-button:hover {
+    background-color: var(--highlight-color);
+    color: var(--text-color);
+}
+
+input[type="file"]::file-selector-button:focus {
+    outline: 2px solid var(--highlight-color);
+    outline-offset: 2px;
+}
+
+/* Styles for Badge Upload Unit */
+.badge-upload-unit {
+    border: 2px solid var(--accent-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: rgba(107, 191, 89, 0.05); /* Slight background highlight */
+}
+
+.badge-upload-unit legend {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: var(--accent-color);
+    padding: 0 0.5rem;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 0 3px var(--accent-color);
+}
+
+.alert-danger {
+    border: 4px solid #dc3545; /* Thick red border */
+    font-size: 1.5rem; /* Large text for visibility */
+    font-weight: bold; /* Bold text for emphasis */
+    background-color: #f8d7da; /* Light red background for contrast */
+    color: #721c24; /* Dark red text for readability */
+    box-shadow: 0 0 15px rgba(220, 53, 69, 0.8); /* Glowing red shadow for emphasis */
+    padding: 20px; /* Increase padding for larger appearance */
+    text-align: center; /* Center align the text */
+    border-radius: 10px; /* Rounded corners for better visual appeal */
+    animation: pulse-alert 1.5s infinite; /* Add a pulsing animation */
+}
+
+/* Animation for pulsing effect */
+@keyframes pulse-alert {
+    0% {
+        box-shadow: 0 0 15px rgba(220, 53, 69, 0.8);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(220, 53, 69, 1);
+    }
+    100% {
+        box-shadow: 0 0 15px rgba(220, 53, 69, 0.8);
+    }
+}
+
+.alert-container {
+    margin-top: 40px; /* Add more space above alerts */
+    margin-bottom: 20px; /* Add space below alerts */
+}
+
+/* Dismiss button styling */
+.btn-close {
+    filter: brightness(0.5);
+    width: 25px;
+    height: 25px;
+}
+/* Buttons in the Earth Day Theme */
+.earth-btn {
+    font-size: 0.9rem; /* Slightly smaller font for "small" buttons */
+    font-weight: bold; /* Bold text for emphasis */
+    padding: 0.5em 1em; /* Adjust padding for consistent size */
+    border-radius: 5px; /* Rounded corners */
+    color: #fff; /* White text for contrast */
+    background-color: var(--primary-color); /* Leafy green background */
+    border: 2px solid var(--primary-color); /* Match button background */
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); /* Subtle text shadow for depth */
+    box-shadow: 0 4px 6px rgba(107, 191, 89, 0.3); /* Subtle green glow */
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    display: inline-flex; /* Aligns icon/text properly */
+    align-items: center; /* Centers icon/text vertically */
+    justify-content: center; /* Centers icon/text horizontally */
+    text-decoration: none; /* Removes underline for links */
+}
+
+/* Hover effect for Earth Day buttons */
+.earth-btn:hover {
+    background-color: var(--highlight-color); /* Highlight lighter green */
+    color: var(--secondary-color); /* Text becomes dark green */
+    box-shadow: 0 6px 8px rgba(107, 191, 89, 0.5); /* Slightly larger glow */
+    transform: translateY(-2px); /* Add subtle lift effect */
+}
+
+/* Focused state for accessibility */
+.earth-btn:focus {
+    outline: 3px solid var(--highlight-color); /* Highlight focus with lighter green */
+    outline-offset: 2px;
+}
+
+/* Disabled state for buttons */
+.earth-btn:disabled {
+    background-color: rgba(107, 191, 89, 0.5); /* Dull green */
+    color: rgba(255, 255, 255, 0.5); /* Muted white text */
+    box-shadow: none;
+    cursor: not-allowed;
+}

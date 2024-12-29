@@ -1,0 +1,640 @@
+from flask import jsonify, render_template, request, redirect, url_for, flash, jsonify, session, abort
+from app import app, db
+from app.models import ArtistSubmission, Judge, JudgeVote, Badge, BadgeArtwork
+from app.forms import ArtistSubmissionForm, PasswordForm, RankingForm
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime, timezone, timedelta
+from sqlalchemy.orm import joinedload
+from io import TextIOWrapper
+
+import os
+import uuid
+import csv
+
+@app.route("/")
+def index():
+    # Get submission status and deadlines
+    submission_open = is_submission_open()
+    submission_status = "Open" if submission_open else "Closed"
+    submission_deadline = SUBMISSION_END.strftime("%B %d, %Y at %I:%M %p %Z")
+
+    # Fetch all badges
+    badges = Badge.query.all()
+
+    return render_template(
+        "index.html",
+        submission_status=submission_status,
+        submission_deadline=submission_deadline,
+        badges=badges  # Pass badges to the template
+    )
+
+
+
+# Constants for the submission period (use PST timezone)
+SUBMISSION_START = datetime(2024, 12, 28, 12, 11, 0, tzinfo=timezone(timedelta(hours=-8)))  # Feb 1, 2025, 00:00 PST
+SUBMISSION_END = datetime(2025, 2, 28, 23, 59, 59, tzinfo=timezone(timedelta(hours=-8)))  # Feb 28, 2025, 23:59 PST
+
+
+def is_submission_open():
+    """Returns True if the current time is within the submission period."""
+    now = datetime.now(timezone(timedelta(hours=-8)))  # Current time in PST
+    return SUBMISSION_START <= now <= SUBMISSION_END
+
+
+@app.route("/admin", methods=["GET", "POST"])
+def admin_page():
+    if not session.get("is_judge") or not session.get("is_admin"):
+        flash("Unauthorized access. Admin privileges required.", "danger")
+        return redirect(url_for("judges_password"))
+
+    # Check the current submission status
+    submission_open = is_submission_open()
+    submission_status = "Open" if submission_open else "Closed"
+
+    # Fetch all judges for display
+    judges = Judge.query.all()
+
+    if request.method == "POST":
+        # Adding a new judge
+        action = request.form.get("action")
+        if action == "add":
+            name = request.form.get("name")
+            password = request.form.get("password")
+            is_admin = request.form.get("is_admin") == "on"  # Checkbox for admin status
+
+            # Check if the judge name is unique
+            existing_judge = Judge.query.filter_by(name=name).first()
+            if existing_judge:
+                flash(f"Judge '{name}' already exists!", "danger")
+            else:
+                # Add new judge
+                new_judge = Judge(name=name, is_admin=is_admin)
+                new_judge.set_password(password)  # Hash the password and store it
+                db.session.add(new_judge)
+                db.session.commit()
+                flash(f"Judge '{name}' added successfully!", "success")
+        
+        # Removing a judge
+        elif action == "remove":
+            judge_id = request.form.get("judge_id")
+            judge_to_remove = Judge.query.get(judge_id)
+            if judge_to_remove:
+                if judge_to_remove.is_admin:
+                    flash("You cannot remove the admin.", "danger")
+                else:
+                    db.session.delete(judge_to_remove)
+                    db.session.commit()
+                    flash(f"Judge '{judge_to_remove.name}' removed successfully!", "success")
+            else:
+                flash("Judge not found!", "danger")
+
+    # Re-fetch judges after any updates
+    judges = Judge.query.all()
+    return render_template("admin.html", judges=judges, submission_status=submission_status)
+
+
+@app.route("/call_to_artists", methods=["GET", "POST"])
+def call_to_artists():
+    submission_open = is_submission_open()
+    submission_status = "Open" if submission_open else "Closed"
+    submission_deadline = SUBMISSION_END.strftime("%B %d, %Y at %I:%M %p %Z")
+
+    if not submission_open:
+        flash("Submissions are currently closed.", "danger")
+        return redirect(url_for("index"))
+
+    form = ArtistSubmissionForm()
+    badges = Badge.query.all()
+    form.badge_id.choices = [(badge.id, f"{badge.name}: {badge.description}") for badge in badges]
+
+    if request.method == "POST":
+        if not form.validate_on_submit():
+            # Collect and flash specific validation errors
+            for field_name, errors in form.errors.items():
+                for error in errors:
+                    flash(f"{form[field_name].label.text}: {error}", "danger")
+
+            # Render the template again with error messages
+            return render_template(
+                "call_to_artists.html",
+                form=form,
+                badges=badges,
+                submission_status=submission_status,
+                submission_deadline=submission_deadline
+            )
+        else:
+            try:
+                # Process form data and save to the database
+                name = form.name.data
+                email = form.email.data
+                phone_number = form.phone_number.data
+                artist_bio = form.artist_bio.data
+                portfolio_link = form.portfolio_link.data
+                statement = form.statement.data
+                cultural_engagement = form.cultural_engagement.data
+                community_impact = form.community_impact.data
+                sustainability_importance = form.sustainability_importance.data
+                demographic_identity = form.demographic_identity.data
+                lane_county_connection = form.lane_county_connection.data
+                accessibility_needs = form.accessibility_needs.data
+                future_engagement = form.future_engagement.data
+                consent_to_data = form.consent_to_data.data
+
+                # Collect badge IDs and artwork files
+                badge_ids = request.form.getlist("badge_id")
+                artwork_files = request.files.getlist("artwork_file")
+
+                # Validate badge-artwork pairings
+                if len(badge_ids) != len(artwork_files) or not badge_ids:
+                    flash("Each badge must have an associated artwork file.", "danger")
+                    return redirect(url_for("call_to_artists"))
+
+                # Create submission record
+                submission = ArtistSubmission(
+                    name=name,
+                    email=email,
+                    phone_number=phone_number,
+                    artist_bio=artist_bio,
+                    portfolio_link=portfolio_link,
+                    statement=statement,
+                    cultural_engagement=cultural_engagement,
+                    community_impact=community_impact,
+                    sustainability_importance=sustainability_importance,
+                    demographic_identity=demographic_identity,
+                    lane_county_connection=lane_county_connection,
+                    accessibility_needs=accessibility_needs,
+                    future_engagement=future_engagement,
+                    consent_to_data=consent_to_data,
+                )
+                db.session.add(submission)
+                db.session.flush()  # Flush to get the submission ID
+
+                # Process badge-artwork associations
+                for badge_id, artwork_file in zip(badge_ids, artwork_files):
+                    if not badge_id.isdigit() or not Badge.query.get(int(badge_id)):
+                        flash("Invalid badge selection.", "danger")
+                        db.session.rollback()
+                        return redirect(url_for("call_to_artists"))
+
+                    file_ext = os.path.splitext(artwork_file.filename)[1]
+                    if not file_ext:
+                        flash("Invalid file extension.", "danger")
+                        db.session.rollback()
+                        return redirect(url_for("call_to_artists"))
+
+                    unique_filename = f"{uuid.uuid4()}{file_ext}"
+                    artwork_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
+                    artwork_file.save(artwork_path)
+
+                    badge_artwork = BadgeArtwork(
+                        submission_id=submission.id,
+                        badge_id=int(badge_id),
+                        artwork_file=unique_filename
+                    )
+                    db.session.add(badge_artwork)
+
+                db.session.commit()  # Commit all changes
+                flash("Submission received successfully!", "success")
+                return redirect(url_for("submission_success"))
+
+            except Exception as e:
+                db.session.rollback()
+                flash("An error occurred while processing your submission. Please try again.", "danger")
+                app.logger.error(f"Error processing submission: {e}")
+
+    return render_template(
+        "call_to_artists.html",
+        form=form,
+        badges=badges,
+        submission_status=submission_status,
+        submission_deadline=submission_deadline
+    )
+
+@app.route("/youth-artists")
+def youth_artists():
+    return render_template("youth_artists.html")
+
+@app.route("/submission-success")
+def submission_success():
+    return render_template("submission_success.html")
+
+@app.route("/carousel-images", methods=["GET"])
+def carousel_images():
+    # Get all files in the `static/submissions` folder
+    submissions_folder = app.config["UPLOAD_FOLDER"]
+    try:
+        images = os.listdir(submissions_folder)
+        # Generate URLs for the images (relative to "static/")
+        image_urls = [f"static/submissions/{image}" for image in images]
+        return jsonify(image_urls)
+    except Exception as e:
+        print(f"Error fetching images: {e}")
+        return jsonify([])  # Return an empty list if there's an error
+
+
+@app.route("/judges", methods=["GET"])
+def judges_password():
+    form = PasswordForm()
+
+    # Check if an admin exists
+    admin_exists = Judge.query.filter_by(is_admin=True).first()
+    if not admin_exists:
+        flash("No admin exists. The first password entered will create the admin.", "info")
+
+    return render_template("judges_password.html", form=form)
+
+
+@app.route("/judges/validate", methods=["POST"])
+def validate_judge_password():
+    form = PasswordForm()
+    if form.validate_on_submit():
+        password = form.password.data
+
+        # Check if an admin already exists in the database
+        admin_exists = Judge.query.filter_by(is_admin=True).first()
+
+        # If no admin exists, create the first admin dynamically
+        if not admin_exists:
+            # Create the first admin with hashed password
+            new_admin = Judge(name="admin", is_admin=True)
+            new_admin.set_password(password)  # Hash and store the password
+            db.session.add(new_admin)
+            db.session.commit()
+
+            # Set session variables for the newly created admin
+            session["is_judge"] = True
+            session["judge_id"] = new_admin.id
+            session["is_admin"] = True
+
+            flash(f"'{new_admin.name}' has been created as the first admin.", "success")
+            return redirect(url_for("admin_page"))
+
+        # Check if the password matches any existing judge
+        judge = Judge.query.all()
+        for existing_judge in judge:
+            if check_password_hash(existing_judge.password_hash, password):
+                # Valid judge login
+                session["is_judge"] = True
+                session["judge_id"] = existing_judge.id
+                session["is_admin"] = existing_judge.is_admin
+
+                if existing_judge.is_admin:
+                    # Redirect to admin page if the judge is an admin
+                    return redirect(url_for("admin_page"))
+                else:
+                    # Redirect to judge ballot otherwise
+                    return redirect(url_for("judges_ballot"))
+
+        # If no matching judge is found, reject the login attempt
+        flash("Invalid password. Please try again.", "danger")
+        return redirect(url_for("judges_password"))
+
+    flash("Form validation failed. Please try again.", "danger")
+    return redirect(url_for("judges_password"))
+
+
+@app.route("/judges/ballot", methods=["GET", "POST"])
+def judges_ballot():
+    if not session.get("is_judge"):
+        flash("Unauthorized access. Please log in.", "danger")
+        return redirect(url_for("judges_password"))
+
+    judge_id = session.get("judge_id")
+    if not isinstance(judge_id, int):
+        flash("Invalid session data. Please log in again.", "danger")
+        return redirect(url_for("judges_password"))
+
+    # Fetch submissions and their associated badges
+    artist_submissions = db.session.query(
+        ArtistSubmission.id,
+        ArtistSubmission.name,
+        ArtistSubmission.email,
+        ArtistSubmission.artist_bio,
+        ArtistSubmission.portfolio_link,
+        ArtistSubmission.statement,
+        BadgeArtwork.artwork_file.label("artwork_file"),
+        Badge.id.label("badge_id"),
+        Badge.name.label("badge_name")
+    ).join(
+        BadgeArtwork, BadgeArtwork.submission_id == ArtistSubmission.id
+    ).join(
+        Badge, BadgeArtwork.badge_id == Badge.id
+    ).all()
+
+    # Fetch all badges for the dropdowns
+    badges = Badge.query.all()
+
+    # Prepare submissions for rendering
+    prepared_submissions = [
+        {
+            "id": submission.id,
+            "name": submission.name,
+            "email": submission.email,
+            "artist_bio": submission.artist_bio,
+            "portfolio_link": submission.portfolio_link,
+            "statement": submission.statement,
+            "artwork_file": submission.artwork_file,
+            "badge_id": submission.badge_id,
+            "badge_name": submission.badge_name,
+        }
+        for submission in artist_submissions
+    ]
+
+    # Retrieve existing votes for this judge
+    existing_votes = db.session.query(JudgeVote).filter_by(judge_id=judge_id).order_by(JudgeVote.rank).all()
+
+    # Sort the submissions based on the vote rankings if votes exist
+    if existing_votes:
+        submission_ids = [vote.submission_id for vote in existing_votes]
+        prepared_submissions.sort(
+            key=lambda submission: submission_ids.index(submission["id"]) if submission["id"] in submission_ids else float('inf')
+        )
+
+    form = RankingForm()
+
+    if request.method == "POST" and form.validate_on_submit():
+        # Get the ranked votes as a comma-separated string
+        ranked_votes = request.form.get("rank", "")
+        if ranked_votes:
+            # Split the comma-separated string into a list of IDs
+            ranked_votes = ranked_votes.split(",")
+            try:
+                # Delete existing votes for this judge before adding new ones
+                JudgeVote.query.filter_by(judge_id=judge_id).delete()
+
+                # Convert IDs to integers and save rankings
+                for rank, submission_id in enumerate(ranked_votes, start=1):
+                    vote = JudgeVote(
+                        judge_id=judge_id,
+                        submission_id=int(submission_id),
+                        rank=rank
+                    )
+                    db.session.add(vote)
+                db.session.commit()
+
+                # Redirect to the correct success page
+                return redirect(url_for("judges_submission_success"))
+            except ValueError as e:
+                flash("An error occurred while processing your rankings. Please try again.", "danger")
+                print(f"Error processing ranked votes: {e}")
+        else:
+            flash("No rankings provided. Please rank the submissions.", "danger")
+
+    # Pass prepared_submissions directly
+    return render_template("judges_ballot.html", artist_submissions=prepared_submissions, form=form, badges=badges)
+
+
+@app.route("/judges/results", methods=["GET"])
+def judges_results():
+    from sqlalchemy import func
+
+    # Aggregate scores by submission
+    results = db.session.query(
+        ArtistSubmission.id,
+        ArtistSubmission.name,
+        func.sum(JudgeVote.rank).label("total_score"),
+        Badge.name.label("badge_name")
+    ).join(
+        JudgeVote, JudgeVote.submission_id == ArtistSubmission.id
+    ).join(
+        BadgeArtwork, BadgeArtwork.submission_id == ArtistSubmission.id
+    ).join(
+        Badge, BadgeArtwork.badge_id == Badge.id
+    ).group_by(
+        ArtistSubmission.id, Badge.name
+    ).order_by(
+        func.sum(JudgeVote.rank)  # Lower score = higher ranking
+    )
+
+    # Fetch distinct judge IDs who have voted
+    voted_judges_ids = db.session.query(JudgeVote.judge_id).distinct().all()
+    voted_judges_ids = [judge_id[0] for judge_id in voted_judges_ids]  # Extract IDs from query result
+
+    # Get the names of judges who have voted
+    voted_judges = db.session.query(Judge.name).filter(Judge.id.in_(voted_judges_ids)).all()
+    voted_judges = [judge[0] for judge in voted_judges]  # Extract names from query result
+
+    # Fetch all judge names and determine who has not voted
+    all_judges = db.session.query(Judge).all()
+    judges_status = {
+        "voted": voted_judges,
+        "not_voted": [judge.name for judge in all_judges if judge.name not in voted_judges],
+    }
+
+    return render_template("judges_results.html", results=results, judges_status=judges_status)
+
+
+
+@app.route("/judges/submission-success")
+def judges_submission_success():
+    return render_template("judges_submission_success.html")
+
+
+@app.route("/judges/ballot/delete/<int:submission_id>", methods=["POST"])
+def delete_submission(submission_id):
+    if not session.get("is_judge") or not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized access. Admin privileges required."}), 403
+
+    # Fetch the submission to delete
+    submission = ArtistSubmission.query.get_or_404(submission_id)
+
+    try:
+        # Delete associated BadgeArtwork entries
+        BadgeArtwork.query.filter_by(submission_id=submission.id).delete()
+
+        # Delete associated JudgeVote entries
+        JudgeVote.query.filter_by(submission_id=submission.id).delete()
+
+        # Delete the submission itself
+        db.session.delete(submission)
+        db.session.commit()
+        return jsonify({"success": "Submission deleted successfully."}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting submission {submission_id}: {e}")
+        return jsonify({"error": "An error occurred while deleting the submission."}), 500
+
+
+@app.route("/badge-list")
+def badge_list():
+    # Fetch all badges
+    badges = Badge.query.all()
+
+    # Render the badge list template
+    return jsonify([{"id": badge.id, "name": badge.name, "description": badge.description} for badge in badges])
+
+
+@app.route("/api/badges", methods=["GET"])
+def api_badges():
+    # Fetch all badges from the database
+    badges = Badge.query.all()
+
+    # Return badge data as JSON, including the 'id'
+    return jsonify([
+        {"id": badge.id, "name": badge.name, "description": badge.description}
+        for badge in badges
+    ])
+
+
+@app.route("/admin/badges", methods=["GET", "POST"])
+def manage_badges():
+    if not session.get("is_judge") or not session.get("is_admin"):
+        flash("Unauthorized access. Admin privileges required.", "danger")
+        return redirect(url_for("judges_password"))
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "add":
+            name = request.form.get("name")
+            description = request.form.get("description")
+
+            # Check if the badge name is unique
+            existing_badge = Badge.query.filter_by(name=name).first()
+            if existing_badge:
+                flash(f"Badge '{name}' already exists!", "danger")
+            else:
+                # Add new badge
+                new_badge = Badge(name=name, description=description)
+                db.session.add(new_badge)
+                db.session.commit()
+                flash(f"Badge '{name}' added successfully!", "success")
+
+        elif action == "edit":
+            badge_id = request.form.get("badge_id")
+            name = request.form.get("name")
+            description = request.form.get("description")
+
+            # Update badge
+            badge = Badge.query.get(badge_id)
+            if badge:
+                badge.name = name
+                badge.description = description
+                db.session.commit()
+                flash(f"Badge '{name}' updated successfully!", "success")
+            else:
+                flash("Badge not found!", "danger")
+
+        elif action == "delete":
+            badge_id = request.form.get("badge_id")
+
+            # Delete badge
+            badge = Badge.query.get(badge_id)
+            if badge:
+                db.session.delete(badge)
+                db.session.commit()
+                flash(f"Badge '{badge.name}' deleted successfully!", "success")
+            else:
+                flash("Badge not found!", "danger")
+
+        elif action == "upload_csv":
+            csv_file = request.files.get("csv_file")
+            if not csv_file or not csv_file.filename.endswith(".csv"):
+                flash("Please upload a valid CSV file.", "danger")
+                return redirect(url_for("manage_badges"))
+
+            # Parse and process CSV file
+            try:
+                csv_reader = csv.reader(TextIOWrapper(csv_file, encoding="utf-8"))
+                header = next(csv_reader)  # Skip the header row
+
+                if header != ["Badge Name", "Badge Description"]:
+                    flash("Invalid CSV format. Ensure the headers are 'Badge Name' and 'Badge Description'.", "danger")
+                    return redirect(url_for("manage_badges"))
+
+                added_badges = []
+                for row in csv_reader:
+                    if len(row) != 2:
+                        flash(f"Invalid row in CSV: {row}. Skipping...", "warning")
+                        continue
+
+                    name, description = row
+                    if not name or not description:
+                        flash(f"Missing data in row: {row}. Skipping...", "warning")
+                        continue
+
+                    # Check for existing badge
+                    existing_badge = Badge.query.filter_by(name=name).first()
+                    if existing_badge:
+                        flash(f"Badge '{name}' already exists. Skipping...", "warning")
+                        continue
+
+                    # Add new badge
+                    new_badge = Badge(name=name, description=description)
+                    db.session.add(new_badge)
+                    added_badges.append(name)
+
+                db.session.commit()
+                if added_badges:
+                    flash(f"Successfully added badges: {', '.join(added_badges)}.", "success")
+                else:
+                    flash("No new badges were added.", "warning")
+
+            except Exception as e:
+                db.session.rollback()
+                flash(f"An error occurred while processing the CSV file: {e}", "danger")
+
+    badges = Badge.query.all()
+    return render_template("admin_badges.html", badges=badges)
+
+
+@app.route("/validate_email", methods=["POST"])
+def validate_email():
+    email = request.json.get("email")
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+
+    # Check if the email already exists in the database
+    existing_submission = ArtistSubmission.query.filter_by(email=email).first()
+    if existing_submission:
+        return jsonify({"error": "Email is already in use"}), 409  # 409 Conflict
+    return jsonify({"success": "Email is available"}), 200
+
+
+@app.route("/manage_judges", methods=["GET", "POST"])
+def manage_judges():
+    if not session.get("is_judge") or not session.get("is_admin"):
+        flash("Unauthorized access. Admin privileges required.", "danger")
+        return redirect(url_for("judges_password"))
+
+    # Fetch all judges for display
+    judges = Judge.query.all()
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        # Adding a new judge
+        if action == "add":
+            name = request.form.get("name")
+            password = request.form.get("password")
+            is_admin = request.form.get("is_admin") == "on"  # Checkbox for admin status
+
+            # Check if the judge name is unique
+            existing_judge = Judge.query.filter_by(name=name).first()
+            if existing_judge:
+                flash(f"Judge '{name}' already exists!", "danger")
+            else:
+                # Add new judge
+                new_judge = Judge(name=name, is_admin=is_admin)
+                new_judge.set_password(password)  # Hash the password and store it
+                db.session.add(new_judge)
+                db.session.commit()
+                flash(f"Judge '{name}' added successfully!", "success")
+
+        # Removing a judge
+        elif action == "remove":
+            judge_id = request.form.get("judge_id")
+            judge_to_remove = Judge.query.get(judge_id)
+            if judge_to_remove:
+                if judge_to_remove.is_admin:
+                    flash("You cannot remove the admin.", "danger")
+                else:
+                    db.session.delete(judge_to_remove)
+                    db.session.commit()
+                    flash(f"Judge '{judge_to_remove.name}' removed successfully!", "success")
+            else:
+                flash("Judge not found!", "danger")
+
+    # Re-fetch judges after any updates
+    judges = Judge.query.all()
+    return render_template("manage_judges.html", judges=judges)
