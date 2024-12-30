@@ -1,0 +1,6 @@
+venv
+migrations
+__pycache__
+app/static/submissions
+config.toml
+app/static/videos
