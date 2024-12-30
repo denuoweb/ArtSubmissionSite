@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Judges Results</h1>
+
+<a href="{{ url_for('admin_page') }}" class="btn btn-secondary">Back to Admin Dashboard</a>
+
+<p>Below are the aggregated rankings of artist submissions based on the judges' votes:</p>
+
+{% if results %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Rank</th>
+            <th>Artist Name</th>
+            <th>Badge Name</th>
+            <th>Score (Lower is Better)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for submission in results %}
+        <tr>
+            <td>{{ loop.index }}</td> <!-- Automatically increments for each row -->
+            <td>{{ submission.name }}</td>
+            <td>{{ submission.badge_name }}</td>
+            <td>{{ submission.total_score }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No results are available yet. Judges need to submit their votes first.</p>
+{% endif %}
+
+<h2>Judge Voting Status</h2>
+<div class="row">
+    <div class="col-md-6">
+        <h3>Judges Who Voted</h3>
+        <ul>
+            {% if judges_status.voted %}
+                {% for judge in judges_status.voted %}
+                <li>{{ judge }}</li>
+                {% endfor %}
+            {% else %}
+                <li>No judges have voted yet.</li>
+            {% endif %}
+        </ul>
+    </div>
+    <div class="col-md-6">
+        <h3>Judges Who Have Not Voted</h3>
+        <ul>
+            {% if judges_status.not_voted %}
+                {% for judge in judges_status.not_voted %}
+                <li>{{ judge }}</li>
+                {% endfor %}
+            {% else %}
+                <li>All judges have voted.</li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

@@ -1,69 +1,114 @@
+// Updated form_validation.js (Preserves all existing logic and fixes the issue)
+
 document.addEventListener("DOMContentLoaded", () => {
-    // Badge upload logic
-    document.getElementById("addBadgeUpload").addEventListener("click", () => {
-        const badgeUploadContainer = document.getElementById("badgeUploadContainer");
-        const newBadgeUpload = badgeUploadContainer.querySelector(".badge-upload-unit").cloneNode(true);
+    const badgeUploadContainer = document.getElementById("badgeUploadContainer");
+    const addBadgeUploadButton = document.getElementById("addBadgeUpload");
 
-        // Clear cloned fields
-        const selectField = newBadgeUpload.querySelector("select");
-        const fileField = newBadgeUpload.querySelector("input[type='file']");
-        const errorContainer = newBadgeUpload.querySelector(".invalid-feedback");
+    if (!badgeUploadContainer || !addBadgeUploadButton) {
+        console.error("Badge upload container or 'Add Another Badge' button is missing.");
+        return;
+    }
 
-        selectField.value = ""; // Reset dropdown
-        fileField.value = ""; // Reset file input
-        errorContainer.textContent = ""; // Clear error messages
+    // Add new badge upload functionality
+    addBadgeUploadButton.addEventListener("click", () => {
+        const badgeOptionsJSONElement = document.getElementById("badgeOptionsJSON");
 
-        selectField.classList.remove("is-invalid");
-        fileField.classList.remove("is-invalid");
+        if (!badgeOptionsJSONElement) {
+            console.error("Badge options JSON element not found.");
+            return;
+        }
+
+        const badgeOptionsHTML = generateBadgeOptionsHTML(badgeOptionsJSONElement);
+
+        if (!badgeOptionsHTML) {
+            console.error("Badge options HTML could not be generated.");
+            return;
+        }
+
+        const newBadgeUpload = document.createElement("fieldset");
+        newBadgeUpload.classList.add("badge-upload-unit", "border", "p-3", "mb-3");
+        newBadgeUpload.innerHTML = `
+            <legend>Badge Upload</legend>
+            <div class="mb-3">
+                <label for="badge_id_new">Select a Badge</label>
+                <select class="form-select" id="badge_id_new" name="badge_id_new" required>
+                    <option value="" disabled selected>Select a badge</option>
+                    ${badgeOptionsHTML}
+                </select>
+                <div class="invalid-feedback">Please select a badge.</div>
+            </div>
+            <div class="mb-3">
+                <label for="artwork_file_new">Upload Artwork</label>
+                <input type="file" class="form-control" id="artwork_file_new" name="artwork_file_new" accept="image/*" required>
+                <div class="invalid-feedback">Please upload your artwork file.</div>
+            </div>
+            <button type="button" class="btn btn-danger btn-sm removeBadgeUpload">Remove</button>
+        `;
 
         badgeUploadContainer.appendChild(newBadgeUpload);
+
+        // Add remove functionality to the new badge upload
+        const removeButton = newBadgeUpload.querySelector(".removeBadgeUpload");
+        removeButton.addEventListener("click", () => {
+            newBadgeUpload.remove();
+        });
+
+        // Add validation to the new file input
+        const newFileInput = newBadgeUpload.querySelector("input[type='file']");
+        if (newFileInput) {
+            addFileSizeValidation(newFileInput);
+        }
+    });
+
+    // Handle remove button clicks
+    badgeUploadContainer.addEventListener("click", (event) => {
+        if (event.target.classList.contains("removeBadgeUpload")) {
+            event.target.closest(".badge-upload-unit").remove();
+        }
+    });
+
+    // Add validation to all existing file inputs
+    const existingFileInputs = document.querySelectorAll("input[type='file']");
+    existingFileInputs.forEach((fileInput) => {
+        addFileSizeValidation(fileInput);
     });
 
     // Form validation logic
     const form = document.getElementById("submissionForm");
-    const submitButton = form.querySelector('button[type="submit"]');
+    const submitButton = form?.querySelector('button[type="submit"]');
 
-    // Exit if form or submit button is not found
     if (!form || !submitButton) {
         console.error("Form or submit button not found!");
         return;
     }
 
-    // Disable the submit button initially
     submitButton.disabled = true;
 
-    // Enable submit button when the form is valid
     form.addEventListener("input", () => {
-        if (form.checkValidity()) {
-            submitButton.disabled = false;
-        } else {
-            submitButton.disabled = true;
-        }
+        submitButton.disabled = !form.checkValidity();
     });
 
-    // Real-time validation for each required field
     form.addEventListener("input", (event) => {
         const field = event.target;
         validateField(field);
     });
 
-    // Validate all fields on form submission
     form.addEventListener("submit", (event) => {
-        event.preventDefault(); // Prevent default submission for debugging
+        event.preventDefault();
 
         const requiredFields = form.querySelectorAll("[required]");
         let allValid = true;
 
         requiredFields.forEach((field) => {
             if (!field.checkValidity()) {
-                validateField(field); // Re-validate each field
+                validateField(field);
                 allValid = false;
             }
         });
 
         if (allValid) {
             console.log("All required fields are valid. Submitting form...");
-            form.submit(); // Submit manually if all fields are valid
+            form.submit();
         }
     });
 
@@ -71,13 +116,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const emailField = document.getElementById("email");
     const emailErrorContainer = document.getElementById("email-error");
 
-    // Add a debounce function to limit the number of requests
     let emailTimeout;
 
-    emailField.addEventListener("input", () => {
+    emailField?.addEventListener("input", () => {
         clearTimeout(emailTimeout);
 
-        // Perform email validation after the user stops typing for 500ms
         emailTimeout = setTimeout(() => {
             const email = emailField.value.trim();
             if (!email) {
@@ -85,30 +128,67 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // Clear any previous errors and validate the format
             clearError(emailField, emailErrorContainer);
             if (!isValidEmail(email)) {
                 showError(emailField, emailErrorContainer, "Invalid email format.");
                 return;
             }
 
-            // Make AJAX request to validate the email
             validateEmail(email);
-        }, 500); // 500ms debounce
+        }, 500);
     });
 
-    // Real-time validation logic for fields
+    // Helper function to generate badge options HTML
+    function generateBadgeOptionsHTML(badgeOptionsJSONElement) {
+        try {
+            const badgeData = JSON.parse(badgeOptionsJSONElement.textContent || "[]");
+
+            if (!Array.isArray(badgeData) || badgeData.length === 0) {
+                return null;
+            }
+
+            return badgeData
+                .map(badge => `<option value="${badge.id}">${badge.name}: ${badge.description}</option>`)
+                .join("");
+        } catch (error) {
+            console.error("Error parsing badge options JSON:", error);
+            return null;
+        }
+    }
+
+    // Helper function to validate file size
+    function addFileSizeValidation(fileInput) {
+        fileInput.addEventListener("change", () => {
+            const files = fileInput.files;
+            const maxFileSize = 8 * 1024 * 1024; // 8 MB in bytes
+
+            if (files.length > 0) {
+                const file = files[0];
+
+                if (file.size > maxFileSize) {
+                    const errorContainer = fileInput.nextElementSibling;
+                    showError(
+                        fileInput,
+                        errorContainer,
+                        `File size must not exceed 8 MB. Current size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`
+                    );
+                    fileInput.value = ""; // Clear the file input to prevent invalid submission
+                } else {
+                    clearError(fileInput, fileInput.nextElementSibling);
+                }
+            }
+        });
+    }
+
+    // Helper: Validate single field
     function validateField(field) {
         const fieldName = field.name || field.id;
         let errorContainer = document.getElementById(`${fieldName}-error`);
 
-        // Fallback if error container is missing
         if (!errorContainer) {
-            console.warn(`Error container for "${fieldName}" not found.`);
-            errorContainer = createErrorContainer(field); // Create one dynamically
+            errorContainer = createErrorContainer(field);
         }
 
-        // Validation logic
         if (field.validity.valueMissing) {
             showError(field, errorContainer, `${fieldName} is required.`);
         } else if (field.validity.tooShort) {
@@ -124,7 +204,31 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Email validation with AJAX
+    // Helper: Check if email format is valid
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    // Helper: Show error message
+    function showError(field, errorContainer, message) {
+        field.classList.add("is-invalid");
+        if (errorContainer) {
+            errorContainer.textContent = message;
+            errorContainer.style.display = "block";
+        }
+    }
+
+    // Helper: Clear error message
+    function clearError(field, errorContainer) {
+        field.classList.remove("is-invalid");
+        if (errorContainer) {
+            errorContainer.textContent = "";
+            errorContainer.style.display = "none";
+        }
+    }
+
+    // Helper: Email validation logic
     function validateEmail(email) {
         fetch("/validate_email", {
             method: "POST",
@@ -139,7 +243,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 clearError(emailField, emailErrorContainer);
                 emailErrorContainer.textContent = "Email is accepted.";
                 emailErrorContainer.style.display = "block";
-                emailErrorContainer.classList.add("text-success"); // Optional success styling
+                emailErrorContainer.classList.add("text-success");
             }
         })
         .catch((error) => {
@@ -148,34 +252,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    // Show error message
-    function showError(field, errorContainer, message) {
-        field.classList.add("is-invalid");
-        errorContainer.textContent = message;
-        errorContainer.style.display = "block"; // Ensure the error container is visible
-        errorContainer.classList.remove("text-success");
-    }
-
-    // Clear error message
-    function clearError(field, errorContainer) {
-        field.classList.remove("is-invalid");
-        errorContainer.textContent = "";
-        errorContainer.style.display = "none"; // Hide the error container
-        errorContainer.classList.remove("text-success");
-    }
-
-    // Dynamically create an error container if it doesn't exist
     function createErrorContainer(field) {
         const errorContainer = document.createElement("div");
-        errorContainer.className = "invalid-feedback"; // Add Bootstrap styling for invalid feedback
-        errorContainer.id = `${field.name || field.id}-error`; // Set a unique ID for the error container
+        errorContainer.className = "invalid-feedback";
+        errorContainer.id = `${field.name || field.id}-error`;
 
-        // Append the error container right after the field
         if (field.parentNode) {
             field.parentNode.appendChild(errorContainer);
         } else {

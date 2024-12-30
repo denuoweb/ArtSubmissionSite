@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Call for Artists</h1>
+
+<p>
+    We invite local artists to contribute their creativity to the Quest by Cycle game by designing unique digital badges! These badges will reward players for completing cycling-related quests that promote sustainability, culture, and community engagement. This is a chance to showcase your work, support an environmental cause, and connect with the community.
+</p>
+
+<h2>What We’re Looking For</h2>
+<ul>
+    <li>Digital designs created as vector art (.SVG files) or high-resolution files (e.g., .PNG or .JPEG at 300 DPI or higher). If you prefer traditional media (e.g., paper or sculpture), you can submit a clear photo image of your work.</li>
+    <li>Each badge should reflect the theme of the associated quest (e.g., cycling, sustainability, local culture).</li>
+    <li>Bold, creative, and engaging designs that inspire players to ride bicycles.</li>
+    <li>Watch our informational video <a href="#" onclick="openVideoModal()">here</a> to see how the Quest by Cycle game rewards sustainable cycling and how you can be part of the badge design contest that brings these quests to life.</li>
+</ul>
+
+<h2>Submission Requirements</h2>
+<ul>
+    <li>
+        <strong>Artist Bio:</strong> A brief bio introducing yourself (1,200 characters).
+    </li>
+    <li>
+        <strong>Badge Design Concept:</strong> Select one or more of the badges currently in the game, and submit finalized designs for those badges. The list of badge names and descriptions can be found <a href="#" onclick="openBadgeModal()">here</a>.
+    </li>
+    <li>
+        <strong>Statement of Interest:</strong> A short statement (1,200 characters) on why you’d like to contribute to this project and how your work reflects diversity, equity, and/or inclusion.
+    </li>
+</ul>
+
+<h2>Awards & Artwork Usage</h2>
+<p>
+    We are excited to announce that ten selected artists will each receive a $200 award for their winning badge designs. Please note:
+</p>
+<p>
+    <strong>Multiple Entries:</strong> You may submit up to three badge designs. If multiple submissions from the same artist are chosen, the artist will only receive one $200 award in total. We are limiting our awards to ten prizes of $200 each.
+</p>
+<p>
+    <strong>Winning Artwork:</strong> Winning artists retain full ownership of their work. However, by accepting the $200 award, winners grant Quest by Cycle a non-exclusive, worldwide license to feature and promote their selected badge design within the game and across promotional channels.
+</p>
+<p>
+    <strong>Featured Artwork (Voluntary Opt-In):</strong> We welcome all artists who wish to support our grassroots mission to opt in and allow us to feature their artwork in the Quest by Cycle game and related promotional materials, with full attribution. This is entirely voluntary, and no additional compensation is provided. If you choose not to opt in, we will not use any of your non-winning submissions for any purpose.
+</p>
+<p>
+    Our organization is a community-driven project reliant on philanthropic grants and public support. We value every submission and wish to highlight diverse creative voices. Although we have limited funds and can only offer monetary awards to ten artists, opting in to have your contributing artwork featured provides additional exposure and a chance for your creativity to help enrich our platform.
+</p>
+<p>
+    <strong>Questions or Feedback?</strong> We are committed to transparency and welcome all inquiries. If you have any concerns, please contact us at 
+    <a href="mailto:info@QuestByCycle.org">info@QuestByCycle.org</a>.
+</p>
+
+<h2>How to Apply</h2>
+<p>
+    Create the badge artwork and complete the contest application below by the deadline. Attach all badge image files as JPG, PNG, or SVG.
+</p>
+
+<h2>Badge List</h2>
+<p id="badge-list">
+    A complete list of the badges to choose from is available 
+    <a href="#" onclick="openBadgeModal()">here</a>. Each badge represents a specific quest, such as cycling to local landmarks, participating in community events, or promoting sustainability.
+</p>
+
+<h2>Legal and Ownership</h2>
+<p>
+    By submitting your artwork, you agree that Quest by Cycle retains the rights to use your design in the game, promotional materials, and related media. For questions regarding intellectual property, please email us.
+</p>
+
+<h2>Submission Period</h2>
+<p>
+    Submissions are currently <strong>{{ submission_status }}</strong>.<br>
+    The deadline for submissions is <strong>{{ submission_deadline }}</strong>.
+</p>
+<form method="POST" enctype="multipart/form-data" id="submissionForm">
+    {{ form.hidden_tag() }}
+    <h2>Submit Your Application</h2>
+
+    <!-- Personal Information Section -->
+    <div class="mb-3">
+        <label for="{{ form.name.id }}">{{ form.name.label }}</label>
+        {{ form.name(class_="form-control", id=form.name.id) }}
+        <div class="invalid-feedback" id="name-error"></div>
+    </div>
+    <div class="mb-3">
+        <label for="{{ form.email.id }}">{{ form.email.label }}</label>
+        {{ form.email(class_="form-control", id=form.email.id) }}
+        <div class="invalid-feedback" id="email-error"></div>
+    </div>
+    <div class="mb-3">
+        <label for="{{ form.phone_number.id }}">{{ form.phone_number.label }}</label>
+        {{ form.phone_number(class_="form-control", id=form.phone_number.id) }}
+        <div class="invalid-feedback" id="phone_number-error"></div>
+    </div>
+
+    <!-- About You Section -->
+    <div class="mb-3">
+        <label for="{{ form.artist_bio.id }}">{{ form.artist_bio.label }}</label>
+        {{ form.artist_bio(class_="form-control", id=form.artist_bio.id) }}
+        <div class="invalid-feedback" id="artist_bio-error"></div>
+    </div>
+    <div class="mb-3">
+        <label for="{{ form.portfolio_link.id }}">{{ form.portfolio_link.label }}</label>
+        {{ form.portfolio_link(class_="form-control", id=form.portfolio_link.id) }}
+        <div class="invalid-feedback" id="portfolio_link-error"></div>
+    </div>
+    <div class="mb-3">
+        <label for="{{ form.statement.id }}">{{ form.statement.label }}</label>
+        {{ form.statement(class_="form-control", id=form.statement.id) }}
+        <div class="invalid-feedback" id="statement-error"></div>
+    </div>
+
+    <!-- Badge Design Information -->
+    <div id="badgeUploadContainer">
+        {% for badge_file in badge_files %}
+        <fieldset class="badge-upload-unit border p-3 mb-3">
+            <legend>Badge Upload</legend>
+            <div class="mb-3">
+                <label for="badge_id_{{ loop.index }}">Select a Badge</label>
+                <select class="form-select" id="badge_id_{{ loop.index }}" name="badge_id" required>
+                    <option value="" disabled>Select a badge</option>
+                    {% for badge in badges %}
+                    <option value="{{ badge.id }}" {% if badge.id == badge_file.badge_id|int %}selected{% endif %}>
+                        {{ badge.name }}: {{ badge.description }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <div class="invalid-feedback">Please select a badge.</div>
+            </div>
+            <div class="mb-3">
+                <label for="artwork_file_{{ loop.index }}">Upload Artwork</label>
+                <input type="file" class="form-control" id="artwork_file_{{ loop.index }}" name="artwork_file" required>
+                {% if badge_file.artwork_file %}
+                <p class="text-muted">Previously uploaded: {{ badge_file.artwork_file }}</p>
+                {% endif %}
+                <div class="invalid-feedback">Please upload your artwork file.</div>
+            </div>
+            <button type="button" class="btn btn-danger btn-sm removeBadgeUpload">Remove</button>
+        </fieldset>
+        {% endfor %}
+    </div>
+    
+    <button type="button" id="addBadgeUpload" class="btn btn-primary btn-sm">Add Another Badge</button>
+    
+    <!-- Demographic Information -->
+    <div class="mb-3">
+        <label for="{{ form.demographic_identity.id }}">{{ form.demographic_identity.label }}</label>
+        {{ form.demographic_identity(class_="form-control", id=form.demographic_identity.id) }}
+        <div class="invalid-feedback" id="demographic_identity-error"></div>
+    </div>
+    <div class="mb-3">
+        <label for="{{ form.lane_county_connection.id }}">{{ form.lane_county_connection.label }}</label>
+        {{ form.lane_county_connection(class_="form-control", id=form.lane_county_connection.id) }}
+        <div class="invalid-feedback" id="lane_county_connection-error"></div>
+    </div>
+    <div class="mb-3">
+        <label for="{{ form.accessibility_needs.id }}">{{ form.accessibility_needs.label }}</label>
+        {{ form.accessibility_needs(class_="form-control", id=form.accessibility_needs.id) }}
+        <div class="invalid-feedback" id="accessibility_needs-error"></div>
+    </div>
+
+    <!-- Future Engagement -->
+    <div class="mb-3">
+        <label for="{{ form.future_engagement.id }}">{{ form.future_engagement.label }}</label>
+        {{ form.future_engagement(class_="form-control", id=form.future_engagement.id) }}
+        <div class="invalid-feedback" id="future_engagement-error"></div>
+    </div>
+
+    <!-- Acknowledgment and Consent -->
+    <div class="mb-3">
+        <label for="{{ form.consent_to_data.id }}">{{ form.consent_to_data.label }}</label>
+        {{ form.consent_to_data(class_="form-check-input", id=form.consent_to_data.id) }}
+        <div class="invalid-feedback" id="consent_to_data-error"></div>
+        <a href="#" class="ms-2" onclick="openTermsModal()">Read Terms and Conditions</a>
+    </div>
+
+    <!-- Featured Artwork (Voluntary Opt-In) -->
+    <div class="mb-3">
+        <label for="{{ form.opt_in_featured_artwork.id }}">
+            {{ form.opt_in_featured_artwork.label }}
+        </label>
+        {{ form.opt_in_featured_artwork(class_="form-check-input", id=form.opt_in_featured_artwork.id) }}
+        <div class="invalid-feedback" id="opt_in_featured_artwork-error"></div>
+        <p class="form-text">
+            By checking this box, you allow Quest by Cycle to feature your submitted artwork in the
+            game and promotional materials (with attribution) if your submission is not selected for an
+            award. We deeply appreciate your contribution, as it enriches the game with community creativity and input. This is entirely voluntary, and no additional compensation is provided.
+        </p>
+    </div>
+    <!-- Submit Button -->
+    <button type="submit" class="btn btn-success mt-3">Submit Application</button>
+</form>
+
+
+<!-- Terms and Conditions Modal -->
+<div id="termsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">Terms and Conditions</h5>
+            <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeTermsModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <p><strong>Privacy & Data Usage:</strong> Your personal information is collected exclusively for the purpose of administering the Quest by Cycle Badge Design Application. It will not be sold or shared with third parties, except as required by law or necessary for running this program.</p>
+            <p><strong>Intellectual Property:</strong> You, the submitting artist, retain full ownership of your artwork. By accepting a $200 award for a winning submission, you grant Quest by Cycle a non-exclusive, worldwide license to use, reproduce, display, and distribute that winning artwork for promotional and program-related purposes, including but not limited to our website, social media, and grant reporting. If you choose to opt in (via the checkbox on the application) to allow Quest by Cycle to feature non-winning artwork, you similarly grant a non-exclusive, worldwide license for us to use, reproduce, display, and distribute that specific non-winning, unselected submission. If you do not opt in, your unselected artwork will not be used for any purpose. Unselected artwork that is opted in does not receive additional monetary compensation, but will receive attribution.</p>
+            <p><strong>Awards & Eligibility:</strong> Ten artists will be selected to each receive a single $200 award for their winning badge designs. If multiple designs by the same artist are selected, that artist will still receive only one $200 prize. This call is open to all artists in Lane County, with a separate category for youth aged 13–18. By submitting, you confirm that you meet these eligibility requirements and that you created the artwork or have full authorization to submit it.</p>
+            <p><strong>Publicity Release:</strong> By receiving a $200 award as a selected winner, you agree that your name and winning artwork may be used in promotional materials for Quest by Cycle without additional compensation. Non-winning artwork will only be used in promotional materials if you have explicitly opted in on the application.</p>
+            <p><strong>Liability:</strong> Quest by Cycle is not responsible for lost, delayed, or misdirected submissions due to technical issues. By participating, you agree to indemnify and hold harmless Quest by Cycle for any dispute arising from third-party claims related to your submission.</p>
+            <p><strong>Right to Modify or Cancel:</strong> Quest by Cycle reserves the right to modify, suspend, or terminate this call for artists if unforeseen circumstances arise. Any changes will be communicated on our official website or via the contact information you have provided.</p>
+            <p><strong>Grassroots & Community Focus:</strong> Quest by Cycle is a grassroots initiative supported by philanthropic grants and public contributions. We strive to recognize the creativity of all participants while using our limited resources responsibly. Offering both paid awards and a voluntary “featured” option for non-winning artwork allows us to remain inclusive, highlight diverse talents, and remain transparent about our funding constraints.</p>
+            <p><strong>Contact & Support:</strong> For any questions regarding your submission, these Terms & Conditions, or to provide feedback, please contact us at <a href="mailto:info@QuestByCycle.org">info@QuestByCycle.org</a>. We welcome inquiries and are committed to ensuring that all artists feel respected and appreciated.</p>
+
+        </div>
+    </div>
+</div>
+
+<!-- Badge Modal -->
+<div id="badgeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="badgeModalTitle">Available Badges</h5>
+            <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeBadgeModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <table class="badge-table">
+                <thead>
+                    <tr>
+                        <th class="badge-name">Badge Name</th>
+                        <th class="badge-description">Description</th>
+                    </tr>
+                </thead>
+                <tbody id="badgeModalTableBody">
+                    <!-- Badge rows will be injected dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Video Modal -->
+<div id="videoModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="videoModalTitle">Informational Video</h5>
+            <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeVideoModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <video id="informationalVideo" controls style="width: 100%; height: auto;">
+                <source src="{{ url_for('static', filename='videos/information.mp4') }}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/form_validation.js') }}"></script>
+<script src="{{ url_for('static', filename='js/badge_modal.js') }}"></script>
+<script src="{{ url_for('static', filename='js/badge_submission.js') }}"></script>
+<script src="{{ url_for('static', filename='js/video_modal.js') }}"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+{% endblock %}

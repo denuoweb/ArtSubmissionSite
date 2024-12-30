@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Submission Successful!</h1>
+<p>Your ranking submission has been successfully recorded. Thank you for your vote!</p>
+<a href="{{ url_for('judges_ballot') }}" class="btn btn-primary">Back to Ballot</a>
+{% endblock %}

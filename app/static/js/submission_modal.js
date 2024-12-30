@@ -18,9 +18,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     <p><strong>Artist Bio:</strong> ${data.artist_bio}</p>
                     <p><strong>Portfolio Link:</strong> ${data.portfolio_link ? `<a href="${data.portfolio_link}" target="_blank">${data.portfolio_link}</a>` : "N/A"}</p>
                     <p><strong>Statement:</strong> ${data.statement}</p>
-                    <p><strong>Cultural Engagement:</strong> ${data.cultural_engagement}</p>
-                    <p><strong>Community Impact:</strong> ${data.community_impact}</p>
-                    <p><strong>Sustainability Importance:</strong> ${data.sustainability_importance}</p>
                     <p><strong>Demographic Identity:</strong> ${data.demographic_identity || "N/A"}</p>
                     <p><strong>Lane County Connection:</strong> ${data.lane_county_connection || "N/A"}</p>
                     <p><strong>Accessibility Needs:</strong> ${data.accessibility_needs || "N/A"}</p>

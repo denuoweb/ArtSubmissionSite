@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Quest by Cycle's Badge Contest</h1>
+
+<p>
+    Quest by Cycle is an innovative game that encourages cycling, sustainability, and community engagement. Players earn points by completing various quests, and digital badges are awarded as a form of recognition and achievement.
+</p>
+
+<p>
+    This project is funded by a grant from the Oregon Cultural Trust. Support the Trust to sustain arts, heritage, and humanities projects by making a matching donation and receiving the match back as a tax credit. Learn more at <a href="https://www.culturaltrust.org" target="_blank" and rel="noopener noreferrer"> culturaltrust.org</a>.
+</p>
+<p>
+    We are calling for artists to help us design these unique badges, bringing their creativity and vision to life. The badges will not only represent different quests but also inspire players to continue their journey toward sustainability.
+</p>
+
+<p>
+    <strong>Status:</strong> {{ submission_status }}<br>
+    <strong>Deadline:</strong> {{ submission_deadline }}
+</p>
+
+<p>
+    Two calls for artists are open:
+</p>
+
+<ul>
+    <li>
+        <strong>General Call for Artists:</strong> This is open to all artists. Ten winning artists will be awarded $200 each.
+    </li>
+    <li>
+        <strong>Youth Artists (13 - 18 years old):</strong> This is open to young artists to contribute their artwork and win exciting prizes. Seven youth artists will be awarded prizes such as bike lights, pumps, fenders, and other accessories.
+    </li>
+</ul>
+
+<p>
+    Explore the badges below, choose the badge or badges you’d like to design, create your badge(s) in the medium of your choice, and submit your work using the Call for Artist or Youth Artist link at the top of the page.:
+</p>
+
+<h2>Available Badges</h2>
+<table class="badge-table">
+    <thead>
+        <tr>
+            <th class="badge-name">Badge Name</th>
+            <th class="badge-description">Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for badge in badges %}
+        <tr>
+            <td class="badge-name">{{ badge.name }}</td>
+            <td class="badge-description">{{ badge.description }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+{% endblock %}

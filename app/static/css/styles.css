@@ -460,15 +460,33 @@ button:focus-visible {
     object-fit: contain; /* Maintain aspect ratio */
 }
 
+/* Ensure uniform appearance of ballot items */
 .rank-item {
-    display: flex; /* Make the item a flex container */
-    gap: 1rem; /* Add space between the thumbnail and the info */
-    align-items: flex-start; /* Align items to the top */
-    justify-content: flex-start; /* Align items horizontally */
-    flex-direction: row; /* Ensure horizontal alignment (default, but explicitly stated) */
-    width: 100%; /* Ensure the container spans the full width */
+    flex: 1 1 calc(25% - 1rem); /* Each item takes up 25% width minus gap */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.rank-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0.8rem 1.6rem rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure the ballot layout is a responsive grid */
+#rankings-list {
+    display: flex;
+    flex-wrap: wrap; /* Wrap items to the next row if needed */
+    gap: 1rem; /* Add spacing between items */
+    justify-content: center; /* Center items horizontally */
+    padding: 0;
+    list-style: none;
+}
 .thumbnail-container {
     max-width: 200px; /* Limit the width of the thumbnail */
     flex-shrink: 0; /* Prevent the thumbnail from shrinking */
@@ -728,4 +746,25 @@ input[type="file"]::file-selector-button:focus {
     color: rgba(255, 255, 255, 0.5); /* Muted white text */
     box-shadow: none;
     cursor: not-allowed;
+}
+
+.real-time-error {
+    font-size: 0.9rem;
+    color: #dc3545; /* Bootstrap "danger" red color */
+}
+
+input.is-invalid, textarea.is-invalid {
+    border-color: #dc3545;
+    background-color: #f8d7da;
+}
+
+input.is-invalid:focus, textarea.is-invalid:focus {
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.invalid-feedback {
+    display: block; /* Ensure it is visible when applied */
+    font-size: 0.875rem; /* Smaller font size */
+    color: #dc3545; /* Bootstrap's default danger color (red) */
+    margin-top: 0.25rem; /* Add a small gap between the input field and the feedback */
 }

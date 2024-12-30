@@ -21,14 +21,12 @@ class ArtistSubmission(db.Model):
     artist_bio = db.Column(db.Text, nullable=False)  # Artist's biography
     portfolio_link = db.Column(db.String(255), nullable=True)  # Optional portfolio URL
     statement = db.Column(db.Text, nullable=False)  # Statement of interest
-    cultural_engagement = db.Column(db.Text, nullable=False)  # Cultural engagement reflection
-    community_impact = db.Column(db.Text, nullable=False)  # Community impact explanation
-    sustainability_importance = db.Column(db.Text, nullable=False)  # Sustainability reflection
     demographic_identity = db.Column(db.Text, nullable=True)  # Optional demographic information
     lane_county_connection = db.Column(db.Text, nullable=True)  # Connection to Lane County
     accessibility_needs = db.Column(db.Text, nullable=True)  # Accessibility needs
     future_engagement = db.Column(db.Text, nullable=True)  # Future engagement interest
     consent_to_data = db.Column(db.Boolean, nullable=False, default=False)  # Consent to data usage
+    opt_in_featured_artwork = db.Column(db.Boolean, nullable=False, default=False)
 
     # Relationship to BadgeArtwork
     badge_artworks = db.relationship('BadgeArtwork', backref='submission', cascade='all, delete-orphan')

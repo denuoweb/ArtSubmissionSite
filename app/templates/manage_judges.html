@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Manage Judges</h1>
+
+<a href="{{ url_for('admin_page') }}" class="btn btn-secondary">Back to Admin Dashboard</a>
+
+<h2>Current Judges</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Admin</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for judge in judges %}
+        <tr>
+            <td>{{ judge.name }}</td>
+            <td>{{ "Yes" if judge.is_admin else "No" }}</td>
+            <td>
+                {% if not judge.is_admin %}
+                <form method="POST" action="{{ url_for('manage_judges') }}" style="display: inline;">
+                    <input type="hidden" name="judge_id" value="{{ judge.id }}">
+                    <input type="hidden" name="action" value="remove">
+                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>Add a New Judge</h2>
+<form method="POST" action="{{ url_for('manage_judges') }}">
+    <input type="hidden" name="action" value="add">
+    <div class="form-group">
+        <label for="name">Judge Name</label>
+        <input type="text" name="name" id="name" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <label for="password">Judge Password</label>
+        <input type="text" name="password" id="password" class="form-control" required>
+    </div>
+    <div class="form-check">
+        <input type="checkbox" name="is_admin" id="is_admin" class="form-check-input">
+        <label for="is_admin" class="form-check-label">Admin</label>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3">Add Judge</button>
+</form>
+{% endblock %}

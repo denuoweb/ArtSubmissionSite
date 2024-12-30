@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Admin Page</h1>
+<h2>Links</h2>
+<div class="btn-group mt-3" role="group">
+    <a href="{{ url_for('judges_ballot') }}" class="btn btn-sm btn-primary earth-btn">Ballot</a>
+    <a href="{{ url_for('judges_results') }}" class="btn btn-sm btn-primary earth-btn">View Results</a>
+    <a href="{{ url_for('manage_badges') }}" class="btn btn-sm btn-primary earth-btn">Manage Badges</a>
+    <a href="{{ url_for('manage_judges') }}" class="btn btn-sm btn-primary earth-btn">Manage Judges</a>
+</div>
+{% endblock %}

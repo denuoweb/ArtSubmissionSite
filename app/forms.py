@@ -1,12 +1,44 @@
 from flask_wtf import FlaskForm
 from wtforms import HiddenField, BooleanField, PasswordField, StringField, TextAreaField, FileField, SubmitField, SelectField
-from wtforms.validators import DataRequired, Email, URL, Optional, Length
+from wtforms.validators import Regexp, DataRequired, Email, URL, Optional, Length, ValidationError
 from flask_wtf.file import FileAllowed
+from urllib.parse import urlparse
+
+import re
+
+def file_size_limit(max_size_mb):
+    def _file_size_limit(form, field):
+        if field.data:
+            file_size = len(field.data.read())  # Get the file size in bytes
+            field.data.seek(0)  # Reset file pointer after reading
+            max_size_bytes = max_size_mb * 1024 * 1024  # Convert MB to bytes
+            if file_size > max_size_bytes:
+                raise ValidationError(f"File size must not exceed {max_size_mb} MB.")
+    return _file_size_limit
+
 
 class ArtistSubmissionForm(FlaskForm):
+    def validate_phone_number(form, field):
+        if field.data:
+            # Allow digits, hyphens, spaces, and parentheses
+            phone_regex = re.compile(r'^[0-9\s\-()]+$')
+            if not phone_regex.match(field.data):
+                raise ValidationError("Phone number must contain only digits, spaces, hyphens, or parentheses.")
+
+
+    def validate_portfolio_link(self, field):
+        if field.data:
+            parsed = urlparse(field.data)
+            # Automatically prepend 'http://' if the protocol is missing
+            if not parsed.scheme:
+                field.data = f"https://{field.data}"
+
     name = StringField(
         "Name", 
-        validators=[DataRequired(message="Your name is required.")],
+        validators=[
+            DataRequired(message="Your name is required."),
+            Length(max=100, message="Name cannot exceed 100 characters.")
+        ],
         render_kw={"placeholder": "Enter your full name"}
     )
     email = StringField(
@@ -18,28 +50,36 @@ class ArtistSubmissionForm(FlaskForm):
         render_kw={"placeholder": "Enter your email address"}
     )
     phone_number = StringField(
-        "Phone Number (optional)", 
-        validators=[Optional()],
+        "Phone Number", 
+        validators=[
+            Optional(),
+            Length(max=15, message="Phone number cannot exceed 15 digits."),
+            validate_phone_number
+        ],
         render_kw={"placeholder": "Enter your phone number"}
     )
     artist_bio = TextAreaField(
         "Artist Bio", 
         validators=[
             DataRequired(message="Please provide a brief artist bio."),
-            Length(min=100, max=200, message="Bio must be between 100-200 words.")
+            Length(min=1000, max=1500, message="Bio must be between 1,000 to 1,500 characters.")
         ],
-        render_kw={"placeholder": "Write a brief bio about yourself (100-200 words)"}
+        render_kw={"placeholder": "Write a brief bio about yourself."}
     )
     portfolio_link = StringField(
-        "Portfolio Link (optional)", 
-        validators=[Optional(), URL(message="Please provide a valid URL.")],
+        "Portfolio Link", 
+        validators=[
+            Optional(),
+            URL(message="Please provide a valid URL."),
+            Length(max=255, message="Portfolio URL cannot exceed 255 characters.")
+        ],
         render_kw={"placeholder": "Provide a link to your online portfolio (if available)"}
     )
     statement = TextAreaField(
         "Statement of Interest", 
         validators=[
             DataRequired(message="Please provide your statement of interest."),
-            Length(max=250, message="Statement must not exceed 250 words.")
+            Length(min=1000, max=1500, message="Statement must be between 1,000 to 1,500 characters.")
         ],
         render_kw={"placeholder": "Why do you want to contribute? How does your work reflect diversity?"}
     )
@@ -53,49 +93,52 @@ class ArtistSubmissionForm(FlaskForm):
         validators=[
             DataRequired(message="Please upload your artwork file."),
             FileAllowed(
-                ["jpg", "jpeg", "png", "pdf"], 
-                message="Only JPG, JPEG, PNG, and PDF files are allowed."
-            )
+                ["jpg", "jpeg", "png", "svg"], 
+                message="Only JPG, JPEG, PNG, or SVG files are allowed."
+            ),
+            file_size_limit(8)  # Limit file size to 8 MB
         ],
-        render_kw={"multiple": True}  # Support multiple files
-    )
-    cultural_engagement = TextAreaField(
-        "How does your design reflect the cultural diversity, history, or values of Lane County?",
-        validators=[DataRequired(message="This field is required.")],
-        render_kw={"placeholder": "Explain the cultural relevance of your design."}
-    )
-    community_impact = TextAreaField(
-        "What impact do you hope your design will have on the community?",
-        validators=[DataRequired(message="This field is required.")],
-        render_kw={"placeholder": "Describe the intended impact of your design."}
-    )
-    sustainability_importance = TextAreaField(
-        "Why is sustainability important to you, and how is it reflected in your badge design?",
-        validators=[DataRequired(message="This field is required.")],
-        render_kw={"placeholder": "Explain how sustainability influences your design."}
+        render_kw={"multiple": True}
     )
     demographic_identity = StringField(
-        "How do you identify? (optional)",
-        render_kw={"placeholder": "Race, ethnicity, gender identity, or age (optional)"}
+        "How do you identify?",
+        validators=[
+            Optional(),
+            Length(max=200, message="Identity description cannot exceed 200 characters.")
+        ],
+        render_kw={"placeholder": "Race, ethnicity, gender identity, or age)"}
     )
     lane_county_connection = TextAreaField(
         "Are you a resident of Lane County or connected to the local community?",
-        validators=[Optional()],
+        validators=[
+            Optional(),
+            Length(max=500, message="Response cannot exceed 500 characters.")
+        ],
         render_kw={"placeholder": "Describe your connection to Lane County."}
     )
     accessibility_needs = TextAreaField(
         "Do you have any accessibility needs we can accommodate?",
-        validators=[Optional()],
+        validators=[
+            Optional(),
+            Length(max=500, message="Response cannot exceed 500 characters.")
+        ],
         render_kw={"placeholder": "Translation services, assistance, etc."}
     )
     future_engagement = TextAreaField(
-        "If yes, tell us how you'd like to be involved in future projects.",
-        validators=[Optional()],
+        "Are you interested in being involved in future projects?",
+        validators=[
+            Optional(),
+            Length(max=500, message="Response cannot exceed 500 characters.")
+        ],
         render_kw={"placeholder": "Describe your interest in future involvement."}
     )
     consent_to_data = BooleanField(
         "Do you consent to the Terms and Conditions?",
         validators=[DataRequired(message="Please provide your consent.")],
+        default=False
+    )
+    opt_in_featured_artwork = BooleanField(
+        "Feature All Submitted Artwork (Voluntary Opt-In)",
         default=False
     )
     submit = SubmitField("Submit")

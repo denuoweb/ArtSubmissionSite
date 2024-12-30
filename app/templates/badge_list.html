@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Available Badges</h1>
+
+<table class="badge-table">
+    <thead>
+        <tr>
+            <th class="badge-name">Badge Name</th>
+            <th class="badge-description">Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for badge in badges %}
+        <tr>
+            <td class="badge-name text-end" style="font-weight: bold; padding-right: 10px;">{{ badge.name }}</td>
+            <td class="badge-description text-start" style="padding-left: 10px;">{{ badge.description }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Return Link -->
+<p class="mt-4">
+    <a href="{{ url_for('call_to_artists') }}" class="btn btn-secondary">Return to Application</a>
+</p>
+{% endblock %}

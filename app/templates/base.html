@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quest by Cycle Badge Submission</title>
+    <!-- Link to your Earth Day–themed CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <!-- Using an unordered list to match your CSS styling for nav ul, nav li, nav a -->
+            <ul>
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('call_to_artists') }}">Call for Artists</a></li>
+                <li><a href="{{ url_for('youth_artists') }}">Youth Artists</a></li>
+                <li><a href="{{ url_for('judges_password') }}">Judges</a></li>
+            </ul>
+        </nav>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="alert-container" style="margin-top: 20px;"> <!-- Added spacing for separation -->
+            {% for category, message in messages %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <div style="margin-top: 3px; margin-bottom: 5px;"> <!-- Margin bottom for spacing -->
+                    {{ message }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+        
+        
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

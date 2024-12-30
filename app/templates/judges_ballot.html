@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Ballot</h1>
+{% if session.get('is_admin') %}
+<a href="{{ url_for('admin_page') }}" class="btn btn-secondary">Back to Admin Dashboard</a>
+{% endif %}
+
+<p>Select and rank your top artist submissions. Drag and drop to reorder your rankings.</p>
+
+<!-- Rankings Form -->
+<form method="POST" id="ranking-form" class="d-flex flex-column">
+    {{ form.csrf_token }}
+    <div id="rankings-list" class="d-flex flex-wrap gap-3">
+        {% for submission in artist_submissions %}
+        <div 
+            data-id="{{ submission.id }}" 
+            class="rank-item card text-center p-3"
+            style="width: 18rem; cursor: grab; box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);">
+            <div class="submission-info">
+                <h5 class="rank-position text-primary fw-bold" style="margin-bottom: 1rem;">
+                    {{ loop.index }} Place
+                </h5>
+                <img 
+                    class="artwork-thumbnail"
+                    src="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}"
+                    data-artwork-url="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}"
+                    data-id="{{ submission.id }}"
+                    data-name="{{ submission.name }}"
+                    alt="Artwork Thumbnail"
+                >
+                <div class="card-body">
+                    <p class="card-text"><strong>Name:</strong> {{ submission.name }}</p>
+                    <p class="card-text"><strong>Badge:</strong> {{ submission.badge_name }}</p>
+                </div>
+            </div>
+            
+            <!-- Delete Button (Visible for Admins Only) -->
+            {% if session.get('is_admin') %}
+            <button 
+                type="button" 
+                class="btn btn-danger btn-sm mt-2 delete-button"
+                data-id="{{ submission.id }}">
+                Delete
+            </button>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Submit Rankings -->
+    <input type="hidden" name="rank" id="rank-input">
+    <button type="submit" class="btn btn-primary mt-4 w-100">Submit Rankings</button>
+</form>
+
+<!-- Artwork Modal -->
+<div id="artworkModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="artworkModalTitle">Artwork Detail</h5>
+            <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeArtworkModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <ul class="list-group">
+                <li class="list-group-item"><strong>Submitter Name:</strong> <span id="modalSubmitterName"></span></li>
+                <li class="list-group-item"><strong>Email:</strong> <span id="modalEmail"></span></li>
+                <li class="list-group-item"><strong>Artist Bio:</strong> <span id="modalArtistBio"></span></li>
+                <li class="list-group-item"><strong>Portfolio Link:</strong> <a id="modalPortfolioLink" href="" target="_blank"></a></li>
+                <li class="list-group-item"><strong>Statement:</strong> <span id="modalStatement"></span></li>
+                <li class="list-group-item"><strong>Cultural Engagement:</strong> <span id="modalCulturalEngagement"></span></li>
+                <li class="list-group-item"><strong>Community Impact:</strong> <span id="modalCommunityImpact"></span></li>
+                <li class="list-group-item"><strong>Sustainability Importance:</strong> <span id="modalSustainability"></span></li>
+                <li class="list-group-item"><strong>Demographic Identity:</strong> <span id="modalDemographic"></span></li>
+                <li class="list-group-item"><strong>Lane County Connection:</strong> <span id="modalLaneCounty"></span></li>
+                <li class="list-group-item"><strong>Accessibility Needs:</strong> <span id="modalAccessibility"></span></li>
+                <li class="list-group-item"><strong>Future Engagement:</strong> <span id="modalFutureEngagement"></span></li>
+                <li class="list-group-item"><strong>Opt-In to Feature All Submitted Artwork?</strong><span id="modalFeaturedOptIn"></span>
+                </li>
+            </ul>
+            <ul id="modalBadgeArtworks" class="list-group mt-3"></ul>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/rankings.js') }}"></script>
+<script src="{{ url_for('static', filename='js/delete_submission.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script src="{{ url_for('static', filename='js/artwork_modal.js') }}"></script>
+{% endblock %}

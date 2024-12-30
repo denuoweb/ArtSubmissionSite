@@ -108,107 +108,130 @@ def call_to_artists():
     form.badge_id.choices = [(badge.id, f"{badge.name}: {badge.description}") for badge in badges]
 
     if request.method == "POST":
+        # Populate badge dropdowns to retain choices on validation errors
+        badge_ids = request.form.getlist("badge_id")
+        artwork_files = request.files.getlist("artwork_file")
+        badge_files = [
+            {"badge_id": badge_id, "artwork_file": file.filename}
+            for badge_id, file in zip(badge_ids, artwork_files)
+        ]
+
         if not form.validate_on_submit():
             # Collect and flash specific validation errors
             for field_name, errors in form.errors.items():
                 for error in errors:
                     flash(f"{form[field_name].label.text}: {error}", "danger")
 
-            # Render the template again with error messages
+            # Retain uploaded files and badge-artwork pairs on validation error
             return render_template(
                 "call_to_artists.html",
                 form=form,
                 badges=badges,
+                badge_files=badge_files,  # Pass badge-file pairs back to the template
                 submission_status=submission_status,
-                submission_deadline=submission_deadline
+                submission_deadline=submission_deadline,
             )
-        else:
-            try:
-                # Process form data and save to the database
-                name = form.name.data
-                email = form.email.data
-                phone_number = form.phone_number.data
-                artist_bio = form.artist_bio.data
-                portfolio_link = form.portfolio_link.data
-                statement = form.statement.data
-                cultural_engagement = form.cultural_engagement.data
-                community_impact = form.community_impact.data
-                sustainability_importance = form.sustainability_importance.data
-                demographic_identity = form.demographic_identity.data
-                lane_county_connection = form.lane_county_connection.data
-                accessibility_needs = form.accessibility_needs.data
-                future_engagement = form.future_engagement.data
-                consent_to_data = form.consent_to_data.data
 
-                # Collect badge IDs and artwork files
-                badge_ids = request.form.getlist("badge_id")
-                artwork_files = request.files.getlist("artwork_file")
+        try:
+            # Process form data and save to the database
+            submission = ArtistSubmission(
+                name=form.name.data,
+                email=form.email.data,
+                phone_number=form.phone_number.data,
+                artist_bio=form.artist_bio.data,
+                portfolio_link=form.portfolio_link.data,
+                statement=form.statement.data,
+                demographic_identity=form.demographic_identity.data,
+                lane_county_connection=form.lane_county_connection.data,
+                accessibility_needs=form.accessibility_needs.data,
+                future_engagement=form.future_engagement.data,
+                consent_to_data=form.consent_to_data.data,
+                opt_in_featured_artwork=form.opt_in_featured_artwork.data,
+            )
+            db.session.add(submission)
+            db.session.flush()  # Flush to get the submission ID
 
-                # Validate badge-artwork pairings
-                if len(badge_ids) != len(artwork_files) or not badge_ids:
-                    flash("Each badge must have an associated artwork file.", "danger")
-                    return redirect(url_for("call_to_artists"))
-
-                # Create submission record
-                submission = ArtistSubmission(
-                    name=name,
-                    email=email,
-                    phone_number=phone_number,
-                    artist_bio=artist_bio,
-                    portfolio_link=portfolio_link,
-                    statement=statement,
-                    cultural_engagement=cultural_engagement,
-                    community_impact=community_impact,
-                    sustainability_importance=sustainability_importance,
-                    demographic_identity=demographic_identity,
-                    lane_county_connection=lane_county_connection,
-                    accessibility_needs=accessibility_needs,
-                    future_engagement=future_engagement,
-                    consent_to_data=consent_to_data,
-                )
-                db.session.add(submission)
-                db.session.flush()  # Flush to get the submission ID
-
-                # Process badge-artwork associations
-                for badge_id, artwork_file in zip(badge_ids, artwork_files):
-                    if not badge_id.isdigit() or not Badge.query.get(int(badge_id)):
-                        flash("Invalid badge selection.", "danger")
-                        db.session.rollback()
-                        return redirect(url_for("call_to_artists"))
-
-                    file_ext = os.path.splitext(artwork_file.filename)[1]
-                    if not file_ext:
-                        flash("Invalid file extension.", "danger")
-                        db.session.rollback()
-                        return redirect(url_for("call_to_artists"))
-
-                    unique_filename = f"{uuid.uuid4()}{file_ext}"
-                    artwork_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
-                    artwork_file.save(artwork_path)
-
-                    badge_artwork = BadgeArtwork(
-                        submission_id=submission.id,
-                        badge_id=int(badge_id),
-                        artwork_file=unique_filename
-                    )
-                    db.session.add(badge_artwork)
-
-                db.session.commit()  # Commit all changes
-                flash("Submission received successfully!", "success")
-                return redirect(url_for("submission_success"))
-
-            except Exception as e:
+            # Validate badge-artwork pairings
+            if len(badge_ids) != len(artwork_files) or not badge_ids:
+                flash("Each badge must have an associated artwork file.", "danger")
                 db.session.rollback()
-                flash("An error occurred while processing your submission. Please try again.", "danger")
-                app.logger.error(f"Error processing submission: {e}")
+                return render_template(
+                    "call_to_artists.html",
+                    form=form,
+                    badges=badges,
+                    badge_files=badge_files,
+                    submission_status=submission_status,
+                    submission_deadline=submission_deadline,
+                )
 
+            for badge_id, artwork_file in zip(badge_ids, artwork_files):
+                # Ensure badge_id is valid
+                if not badge_id.isdigit() or not Badge.query.get(int(badge_id)):
+                    flash("Invalid badge selection.", "danger")
+                    db.session.rollback()
+                    return render_template(
+                        "call_to_artists.html",
+                        form=form,
+                        badges=badges,
+                        badge_files=badge_files,
+                        submission_status=submission_status,
+                        submission_deadline=submission_deadline,
+                    )
+
+                # Ensure artwork_file is valid
+                file_ext = os.path.splitext(artwork_file.filename)[1].lower()
+                if not file_ext or file_ext not in [".jpg", ".jpeg", ".png", ".svg"]:
+                    flash("Invalid file type. Only JPG, JPEG, PNG, or SVG files are allowed.", "danger")
+                    db.session.rollback()
+                    return render_template(
+                        "call_to_artists.html",
+                        form=form,
+                        badges=badges,
+                        badge_files=badge_files,
+                        submission_status=submission_status,
+                        submission_deadline=submission_deadline,
+                    )
+
+                # Save the uploaded file with a unique filename
+                unique_filename = f"{uuid.uuid4()}{file_ext}"
+                artwork_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
+                artwork_file.save(artwork_path)
+
+                # Create the badge artwork association
+                badge_artwork = BadgeArtwork(
+                    submission_id=submission.id,
+                    badge_id=int(badge_id),
+                    artwork_file=unique_filename,
+                )
+                db.session.add(badge_artwork)
+
+            db.session.commit()  # Commit all changes
+            flash("Submission received successfully!", "success")
+            return redirect(url_for("submission_success"))
+
+        except Exception as e:
+            db.session.rollback()  # Rollback any changes on error
+            flash("An error occurred while processing your submission. Please try again.", "danger")
+            app.logger.error(f"Error processing submission: {e}")
+            return render_template(
+                "call_to_artists.html",
+                form=form,
+                badges=badges,
+                badge_files=badge_files,
+                submission_status=submission_status,
+                submission_deadline=submission_deadline,
+            )
+
+    # GET Request: Render the submission form
     return render_template(
         "call_to_artists.html",
         form=form,
         badges=badges,
+        badge_files=[],  # No files uploaded initially
         submission_status=submission_status,
-        submission_deadline=submission_deadline
+        submission_deadline=submission_deadline,
     )
+
 
 @app.route("/youth-artists")
 def youth_artists():
@@ -304,7 +327,7 @@ def judges_ballot():
         flash("Invalid session data. Please log in again.", "danger")
         return redirect(url_for("judges_password"))
 
-    # Fetch submissions and their associated badges
+    # Fetch all artist submissions
     artist_submissions = db.session.query(
         ArtistSubmission.id,
         ArtistSubmission.name,
@@ -314,74 +337,58 @@ def judges_ballot():
         ArtistSubmission.statement,
         BadgeArtwork.artwork_file.label("artwork_file"),
         Badge.id.label("badge_id"),
-        Badge.name.label("badge_name")
+        Badge.name.label("badge_name"),
     ).join(
         BadgeArtwork, BadgeArtwork.submission_id == ArtistSubmission.id
     ).join(
         Badge, BadgeArtwork.badge_id == Badge.id
-    ).all()
+    ).distinct().all()  # Eliminate duplicates with DISTINCT
 
-    # Fetch all badges for the dropdowns
-    badges = Badge.query.all()
+    # Retrieve existing votes for the current judge
+    saved_votes = db.session.query(JudgeVote).filter_by(judge_id=judge_id).order_by(JudgeVote.rank).all()
+    ranked_submission_ids = [vote.submission_id for vote in saved_votes]
 
-    # Prepare submissions for rendering
-    prepared_submissions = [
-        {
-            "id": submission.id,
-            "name": submission.name,
-            "email": submission.email,
-            "artist_bio": submission.artist_bio,
-            "portfolio_link": submission.portfolio_link,
-            "statement": submission.statement,
-            "artwork_file": submission.artwork_file,
-            "badge_id": submission.badge_id,
-            "badge_name": submission.badge_name,
-        }
-        for submission in artist_submissions
+    # Sort submissions: ranked first, unranked later
+    ranked_submissions = [
+        submission for submission in artist_submissions if submission.id in ranked_submission_ids
+    ]
+    ranked_submissions.sort(key=lambda s: ranked_submission_ids.index(s.id))
+
+    unranked_submissions = [
+        submission for submission in artist_submissions if submission.id not in ranked_submission_ids
     ]
 
-    # Retrieve existing votes for this judge
-    existing_votes = db.session.query(JudgeVote).filter_by(judge_id=judge_id).order_by(JudgeVote.rank).all()
+    prepared_submissions = ranked_submissions + unranked_submissions
 
-    # Sort the submissions based on the vote rankings if votes exist
-    if existing_votes:
-        submission_ids = [vote.submission_id for vote in existing_votes]
-        prepared_submissions.sort(
-            key=lambda submission: submission_ids.index(submission["id"]) if submission["id"] in submission_ids else float('inf')
-        )
-
+    # CSRF form
     form = RankingForm()
 
-    if request.method == "POST" and form.validate_on_submit():
-        # Get the ranked votes as a comma-separated string
+    # Save rankings when submitted
+    if request.method == "POST":
         ranked_votes = request.form.get("rank", "")
         if ranked_votes:
-            # Split the comma-separated string into a list of IDs
-            ranked_votes = ranked_votes.split(",")
+            ranked_votes = ranked_votes.split(",")  # Convert to a list of submission IDs
             try:
-                # Delete existing votes for this judge before adding new ones
-                JudgeVote.query.filter_by(judge_id=judge_id).delete()
+                with db.session.begin_nested():
+                    # Clear existing votes for this judge
+                    JudgeVote.query.filter_by(judge_id=judge_id).delete()
 
-                # Convert IDs to integers and save rankings
-                for rank, submission_id in enumerate(ranked_votes, start=1):
-                    vote = JudgeVote(
-                        judge_id=judge_id,
-                        submission_id=int(submission_id),
-                        rank=rank
-                    )
-                    db.session.add(vote)
+                    # Save new rankings
+                    for rank, submission_id in enumerate(ranked_votes, start=1):
+                        vote = JudgeVote(
+                            judge_id=judge_id,
+                            submission_id=int(submission_id),
+                            rank=rank
+                        )
+                        db.session.add(vote)
                 db.session.commit()
+                return jsonify({"success": "Rankings saved successfully."}), 200
+            except Exception as e:
+                db.session.rollback()
+                app.logger.error(f"Error saving rankings: {e}")
+                return jsonify({"error": "Failed to save rankings."}), 500
 
-                # Redirect to the correct success page
-                return redirect(url_for("judges_submission_success"))
-            except ValueError as e:
-                flash("An error occurred while processing your rankings. Please try again.", "danger")
-                print(f"Error processing ranked votes: {e}")
-        else:
-            flash("No rankings provided. Please rank the submissions.", "danger")
-
-    # Pass prepared_submissions directly
-    return render_template("judges_ballot.html", artist_submissions=prepared_submissions, form=form, badges=badges)
+    return render_template("judges_ballot.html", artist_submissions=prepared_submissions, form=form)
 
 
 @app.route("/judges/results", methods=["GET"])
@@ -638,3 +645,32 @@ def manage_judges():
     # Re-fetch judges after any updates
     judges = Judge.query.all()
     return render_template("manage_judges.html", judges=judges)
+
+
+@app.route("/api/artwork-detail/<int:submission_id>", methods=["GET"])
+def api_artwork_detail(submission_id):
+    submission = ArtistSubmission.query.options(joinedload(ArtistSubmission.badge_artworks)).get(submission_id)
+    if not submission:
+        return jsonify({"error": "Submission not found"}), 404
+
+    badge_artworks = [
+        {
+            "badge_id": artwork.badge_id,
+            "artwork_file": url_for('static', filename=f"submissions/{artwork.artwork_file}", _external=True)
+        } for artwork in submission.badge_artworks
+    ]
+
+    artwork_details = {
+        "name": submission.name,
+        "email": submission.email,
+        "artist_bio": submission.artist_bio,
+        "portfolio_link": submission.portfolio_link,
+        "statement": submission.statement,
+        "demographic_identity": submission.demographic_identity,
+        "lane_county_connection": submission.lane_county_connection,
+        "accessibility_needs": submission.accessibility_needs,
+        "future_engagement": submission.future_engagement,
+        "badge_artworks": badge_artworks,
+        "opt_in_featured_artwork": submission.opt_in_featured_artwork
+    }
+    return jsonify(artwork_details)

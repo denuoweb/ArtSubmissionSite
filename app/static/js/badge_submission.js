@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const artworkUpload = document.createElement('input');
         artworkUpload.type = 'file';
         artworkUpload.name = 'artwork_file[]';
-        artworkUpload.accept = '.jpg,.jpeg,.png,.pdf';
+        artworkUpload.accept = '.jpg,.jpeg,.png,.svg,.png';
         artworkUpload.required = true;
         artworkUploadWrapper.appendChild(artworkLabel);
         artworkUploadWrapper.appendChild(artworkUpload);
