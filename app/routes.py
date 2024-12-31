@@ -1,23 +1,45 @@
 from flask import jsonify, render_template, request, redirect, url_for, flash, jsonify, session, abort
 from app import app, db
-from app.models import ArtistSubmission, YouthArtistSubmission, Judge, JudgeVote, Badge, BadgeArtwork
-from app.forms import ArtistSubmissionForm, PasswordForm, RankingForm, YouthArtistSubmissionForm
+from app.models import ArtistSubmission, YouthArtistSubmission, Judge, JudgeVote, Badge, BadgeArtwork, SubmissionPeriod
+from app.forms import ArtistSubmissionForm, PasswordForm, RankingForm, YouthArtistSubmissionForm, SubmissionDatesForm
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import joinedload
 from io import TextIOWrapper
+from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 
 import os
 import uuid
 import csv
 
+
+def is_submission_open():
+    """Returns True if the current time is within the submission period."""
+    now = datetime.now(timezone.utc)  # Current time in UTC
+    submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
+    if submission_period:
+        # Submission times are already stored in UTC, so no need for timezone assignment
+        return submission_period.submission_start <= now <= submission_period.submission_end
+    return False
+
+
+
 @app.route("/")
 def index():
     # Get submission status and deadlines
+    submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
     submission_open = is_submission_open()
     submission_status = "Open" if submission_open else "Closed"
-    submission_start = SUBMISSION_START.strftime("%B %d, %Y at %I:%M %p %Z")
-    submission_deadline = SUBMISSION_END.strftime("%B %d, %Y at %I:%M %p %Z")
+    
+    if submission_period:
+        # Convert submission times to Pacific Time for display
+        pacific = ZoneInfo("US/Pacific")
+        submission_start = submission_period.submission_start.astimezone(pacific).strftime("%B %d, %Y at %I:%M %p %Z")
+        submission_deadline = submission_period.submission_end.astimezone(pacific).strftime("%B %d, %Y at %I:%M %p %Z")
+    else:
+        submission_start = "N/A"
+        submission_deadline = "N/A"
 
     # Fetch all badges
     badges = Badge.query.all()
@@ -31,23 +53,50 @@ def index():
     )
 
 
-
-# Constants for the submission period (use PST timezone)
-SUBMISSION_START = datetime(2024, 12, 28, 12, 11, 0, tzinfo=timezone(timedelta(hours=-8)))  # Feb 1, 2025, 00:00 PST
-SUBMISSION_END = datetime(2025, 2, 28, 23, 59, 59, tzinfo=timezone(timedelta(hours=-8)))  # Feb 28, 2025, 23:59 PST
-
-
-def is_submission_open():
-    """Returns True if the current time is within the submission period."""
-    now = datetime.now(timezone(timedelta(hours=-8)))  # Current time in PST
-    return SUBMISSION_START <= now <= SUBMISSION_END
-
-
 @app.route("/admin", methods=["GET", "POST"])
 def admin_page():
     if not session.get("is_judge") or not session.get("is_admin"):
         flash("Unauthorized access. Admin privileges required.", "danger")
         return redirect(url_for("judges_password"))
+
+    # Fetch the latest submission period
+    submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
+
+    # Pre-fill the form with existing dates if available
+    dates_form = SubmissionDatesForm(
+        submission_start=submission_period.submission_start if submission_period else None,
+        submission_end=submission_period.submission_end if submission_period else None,
+    )
+    
+    if dates_form.validate_on_submit():
+        try:
+            # Assign the local timezone (Pacific Time) to form data
+            pacific = ZoneInfo("US/Pacific")
+            submission_start = dates_form.submission_start.data.replace(tzinfo=pacific)
+            submission_end = dates_form.submission_end.data.replace(tzinfo=pacific)
+
+            # Convert the local time to UTC for storage
+            submission_start_utc = submission_start.astimezone(timezone.utc)
+            submission_end_utc = submission_end.astimezone(timezone.utc)
+
+            if submission_period:
+                # Update the existing submission period
+                submission_period.submission_start = submission_start_utc
+                submission_period.submission_end = submission_end_utc
+            else:
+                # Create a new submission period
+                new_period = SubmissionPeriod(
+                    submission_start=submission_start_utc,
+                    submission_end=submission_end_utc,
+                )
+                db.session.add(new_period)
+
+            db.session.commit()
+            flash("Submission dates updated successfully!", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash("An error occurred while updating submission dates. Please try again.", "danger")
+            app.logger.error(f"Error updating submission dates: {e}")
 
     # Check the current submission status
     submission_open = is_submission_open()
@@ -92,17 +141,21 @@ def admin_page():
 
     # Re-fetch judges after any updates
     judges = Judge.query.all()
-    return render_template("admin.html", judges=judges, submission_status=submission_status)
+
+    return render_template("admin.html",
+        judges=judges,
+        submission_status=submission_status,
+        submission_start=submission_period.submission_start if submission_period else None,
+        submission_end=submission_period.submission_end if submission_period else None,
+        dates_form=dates_form)
+
 
 @app.route("/call_to_artists", methods=["GET", "POST"])
 def call_to_artists():
     submission_open = is_submission_open()
     submission_status = "Open" if submission_open else "Closed"
-    submission_deadline = SUBMISSION_END.strftime("%B %d, %Y at %I:%M %p %Z")
-
-    if not submission_open:
-        flash("Submissions are currently closed.", "danger")
-        return redirect(url_for("index"))
+    submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
+    submission_deadline = submission_period.submission_end.strftime("%B %d, %Y at %I:%M %p %Z") if submission_period else "N/A"
 
     form = ArtistSubmissionForm()
 
@@ -117,6 +170,10 @@ def call_to_artists():
     previous_badge_data = []
 
     if request.method == "POST":
+        if not submission_open:
+            flash("Submissions are currently closed. You cannot submit at this time.", "danger")
+            return redirect(url_for("call_to_artists"))
+
         for badge_upload in form.badge_uploads.entries:
             badge_id = badge_upload.badge_id.data
             artwork_file = badge_upload.artwork_file.data
@@ -143,6 +200,7 @@ def call_to_artists():
                 "call_to_artists.html",
                 form=form,
                 badges=badges,
+                submission_open=submission_open,
                 submission_status=submission_status,
                 submission_deadline=submission_deadline,
                 previous_badge_data=previous_badge_data  # Pass previous data to template
@@ -233,6 +291,7 @@ def call_to_artists():
         "call_to_artists.html",
         form=form,
         badges=badges,
+        submission_open=submission_open,
         submission_status=submission_status,
         submission_deadline=submission_deadline,
         previous_badge_data=previous_badge_data  # Pass previous data to template
@@ -243,11 +302,8 @@ def call_to_artists():
 def call_to_youth_artists():
     submission_open = is_submission_open()
     submission_status = "Open" if submission_open else "Closed"
-    submission_deadline = SUBMISSION_END.strftime("%B %d, %Y at %I:%M %p %Z")
-
-    if not submission_open:
-        flash("Submissions are currently closed.", "danger")
-        return redirect(url_for("index"))
+    submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
+    submission_deadline = submission_period.submission_end.strftime("%B %d, %Y at %I:%M %p %Z") if submission_period else "N/A"
 
     form = YouthArtistSubmissionForm()
 
@@ -257,6 +313,11 @@ def call_to_youth_artists():
     form.badge_id.choices = badge_choices
 
     if request.method == "POST":
+
+        if not submission_open:
+            flash("Submissions are currently closed. You cannot submit at this time.", "danger")
+            return redirect(url_for("call_to_youth_artists"))
+
         if not form.validate_on_submit():
             for field_name, errors in form.errors.items():
                 for error in errors:
@@ -265,8 +326,9 @@ def call_to_youth_artists():
                 "call_to_youth_artists.html",
                 form=form,
                 badges=badges,
+                submission_open=submission_open,
                 submission_status=submission_status,
-                submission_deadline=submission_deadline
+                submission_deadline=submission_deadline,
             )
         else:
             try:
@@ -326,8 +388,9 @@ def call_to_youth_artists():
         "call_to_youth_artists.html",
         form=form,
         badges=badges,
+        submission_open=submission_open,
         submission_status=submission_status,
-        submission_deadline=submission_deadline
+        submission_deadline=submission_deadline,
     )
     
 

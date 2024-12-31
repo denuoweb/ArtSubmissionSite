@@ -27,6 +27,12 @@
     Fill out the form below with your information and artwork submission. Be sure to include all required fields so we can process your application.
 </p>
 
+{% if not submission_open %}
+<div class="alert alert-warning">
+    Submissions are currently closed. You can review the details, but submissions cannot be submitted at this time.
+</div>
+{% endif %}
+
 <form method="post" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
 
@@ -76,7 +82,7 @@
     </div>
 
     <div>
-        <button type="submit" class="btn btn-success mt-3">Submit Application</button>
+        <button type="submit" class="btn btn-success mt-3" {% if not submission_open %}disabled{% endif %}>Submit Application</button>
     </div>
 </form>
 

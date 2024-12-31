@@ -2,6 +2,7 @@
 from flask_wtf import FlaskForm
 from wtforms import Form, FormField, IntegerField, HiddenField, FieldList, BooleanField, PasswordField, StringField, TextAreaField, FileField, SubmitField, SelectField
 from wtforms.validators import Regexp, NumberRange, DataRequired, Email, URL, Optional, Length, ValidationError
+from wtforms.fields import DateTimeLocalField
 from flask_wtf.file import FileAllowed
 from urllib.parse import urlparse
 import re
@@ -19,7 +20,7 @@ def file_size_limit(max_size_mb):
             # If `field.data` is a string (previously uploaded file), skip validation
             return
     return _file_size_limit
-    
+
 
 class BadgeUploadForm(Form):
     badge_id = SelectField(
@@ -239,3 +240,17 @@ class PasswordForm(FlaskForm):
 class RankingForm(FlaskForm):
     rank = HiddenField("Rank")
     submit = SubmitField("Submit Rankings")  # Add a SubmitField
+
+
+class SubmissionDatesForm(FlaskForm):
+    submission_start = DateTimeLocalField(
+        "Submission Start",
+        format='%Y-%m-%dT%H:%M',
+        validators=[DataRequired(message="Please provide a start date.")],
+    )
+    submission_end = DateTimeLocalField(
+        "Submission End",
+        format='%Y-%m-%dT%H:%M',
+        validators=[DataRequired(message="Please provide an end date.")],
+    )
+    submit = SubmitField("Update Submission Dates")

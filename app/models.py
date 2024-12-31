@@ -96,3 +96,12 @@ class JudgeVote(db.Model):
 
     def __repr__(self):
         return f"<JudgeVote judge_id={self.judge_id}, badge_artwork_id={self.badge_artwork_id}, rank={self.rank}>"
+
+
+class SubmissionPeriod(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    submission_start = db.Column(db.DateTime(timezone=True), nullable=False)
+    submission_end = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    def __repr__(self):
+        return f"<SubmissionPeriod start={self.submission_start}, end={self.submission_end}>"

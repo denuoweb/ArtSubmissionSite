@@ -56,6 +56,12 @@
     <a href="#" onclick="openBadgeModal(); return false;">here</a>. Each badge represents a specific quest, such as cycling to local landmarks, participating in community events, or promoting sustainability.
 </p>
 
+{% if not submission_open %}
+<div class="alert alert-warning">
+    Submissions are currently closed. You can review the details, but submissions cannot be submitted at this time.
+</div>
+{% endif %}
+
 <h2>Application</h2>
 <form method="POST" enctype="multipart/form-data" id="submissionForm">
     {{ form.hidden_tag() }}
@@ -93,6 +99,28 @@
         {{ form.statement(class_="form-control", id=form.statement.id) }}
         <div class="invalid-feedback" id="statement-error"></div>
     </div>
+    <!-- Demographic Information -->
+    <div class="mb-3">
+        <label for="{{ form.demographic_identity.id }}">{{ form.demographic_identity.label }}</label>
+        {{ form.demographic_identity(class_="form-control", id=form.demographic_identity.id) }}
+        <div class="invalid-feedback" id="demographic_identity-error"></div>
+    </div>
+    <div class="mb-3">
+        <label for="{{ form.lane_county_connection.id }}">{{ form.lane_county_connection.label }}</label>
+        {{ form.lane_county_connection(class_="form-control", id=form.lane_county_connection.id) }}
+        <div class="invalid-feedback" id="lane_county_connection-error"></div>
+    </div>
+    <div class="mb-3">
+        <label for="{{ form.accessibility_needs.id }}">{{ form.accessibility_needs.label }}</label>
+        {{ form.accessibility_needs(class_="form-control", id=form.accessibility_needs.id) }}
+        <div class="invalid-feedback" id="accessibility_needs-error"></div>
+    </div>
+    <!-- Future Engagement -->
+    <div class="mb-3">
+        <label for="{{ form.future_engagement.id }}">{{ form.future_engagement.label }}</label>
+        {{ form.future_engagement(class_="form-control", id=form.future_engagement.id) }}
+        <div class="invalid-feedback" id="future_engagement-error"></div>
+    </div>
 
     <!-- Badge Design Information -->
     <div id="badgeUploadContainer">
@@ -126,31 +154,7 @@
         {% endfor %}
     </div>
     
-    <button type="button" id="addBadgeUpload" class="btn btn-success mt-3">Add Badge Upload</button>
-
-    <!-- Demographic Information -->
-    <div class="mb-3">
-        <label for="{{ form.demographic_identity.id }}">{{ form.demographic_identity.label }}</label>
-        {{ form.demographic_identity(class_="form-control", id=form.demographic_identity.id) }}
-        <div class="invalid-feedback" id="demographic_identity-error"></div>
-    </div>
-    <div class="mb-3">
-        <label for="{{ form.lane_county_connection.id }}">{{ form.lane_county_connection.label }}</label>
-        {{ form.lane_county_connection(class_="form-control", id=form.lane_county_connection.id) }}
-        <div class="invalid-feedback" id="lane_county_connection-error"></div>
-    </div>
-    <div class="mb-3">
-        <label for="{{ form.accessibility_needs.id }}">{{ form.accessibility_needs.label }}</label>
-        {{ form.accessibility_needs(class_="form-control", id=form.accessibility_needs.id) }}
-        <div class="invalid-feedback" id="accessibility_needs-error"></div>
-    </div>
-
-    <!-- Future Engagement -->
-    <div class="mb-3">
-        <label for="{{ form.future_engagement.id }}">{{ form.future_engagement.label }}</label>
-        {{ form.future_engagement(class_="form-control", id=form.future_engagement.id) }}
-        <div class="invalid-feedback" id="future_engagement-error"></div>
-    </div>
+    <button type="button" id="addBadgeUpload" class="btn btn-success mt-3">Add Artwork Upload</button><br>
 
     <!-- Acknowledgment and Consent -->
     <div class="mb-3 form-check">
@@ -175,7 +179,7 @@
     </div>
 
     <!-- Submit Button -->
-    <button type="submit" class="btn btn-success mt-3">Submit Application</button>
+    <button type="submit" class="btn btn-success mt-3" {% if not submission_open %}disabled{% endif %}>Submit Application</button>
 </form>
 
 
