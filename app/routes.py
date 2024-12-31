@@ -358,25 +358,37 @@ def judges_ballot():
         ranked_votes = request.form.get("rank", "")
         if ranked_votes:
             ranked_votes = ranked_votes.split(",")  # Convert to a list of submission IDs
+            rank = 1  # Initialize rank counter manually
             try:
                 with db.session.begin_nested():
                     # Clear existing votes for this judge
                     JudgeVote.query.filter_by(judge_id=judge_id).delete()
 
                     # Save new rankings
-                    for rank, submission_id in enumerate(ranked_votes, start=1):
+                    for submission_id in ranked_votes:
+                        # Fetch the corresponding BadgeArtwork for the submission_id
+                        badge_artwork = BadgeArtwork.query.filter_by(submission_id=submission_id).first()
+                        if not badge_artwork:
+                            flash(f"No BadgeArtwork found for submission ID {submission_id}.", "danger")
+                            return redirect(url_for("judges_ballot"))
+
+                        # Create a new vote with badge_artwork_id
                         vote = JudgeVote(
                             judge_id=judge_id,
                             submission_id=int(submission_id),
-                            rank=rank
+                            rank=rank,
+                            badge_artwork_id=badge_artwork.id  # Associate the vote with the correct badge_artwork_id
                         )
                         db.session.add(vote)
+                        rank += 1  # Increment rank manually
                 db.session.commit()
-                return jsonify({"success": "Rankings saved successfully."}), 200
+                # Redirect to the success page
+                return redirect(url_for("judges_submission_success"))
             except Exception as e:
                 db.session.rollback()
                 app.logger.error(f"Error saving rankings: {e}")
-                return jsonify({"error": "Failed to save rankings."}), 500
+                flash("An error occurred while saving your rankings. Please try again.", "danger")
+                return redirect(url_for("judges_ballot"))
 
     return render_template("judges_ballot.html", artist_submissions=prepared_submissions, form=form)
 
@@ -716,3 +728,19 @@ def api_artwork_detail(item_id):
 
     # If neither is found, return an error
     return jsonify({"error": "Item not found"}), 404
+
+
+@app.route("/admin/clear_votes", methods=["POST"])
+def clear_votes():
+    if not session.get("is_judge") or not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized access. Admin privileges required."}), 403
+
+    try:
+        # Delete all votes from the JudgeVote table
+        db.session.query(JudgeVote).delete()
+        db.session.commit()
+        return jsonify({"success": "All judge votes have been cleared successfully."}), 200
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error clearing votes: {e}")
+        return jsonify({"error": "An error occurred while clearing votes."}), 500
