@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="preload" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}"></noscript>
-
+    
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 
 </head>
@@ -20,6 +20,7 @@
                 <li><a href="{{ url_for('index') }}">Home</a></li>
                 <li><a href="{{ url_for('call_to_artists') }}">Call for Artists</a></li>
                 <li><a href="{{ url_for('call_to_youth_artists') }}">Youth Artists</a></li>
+                <li><a href="{{ url_for('judges_password') }}">Judges</a></li>
             </ul>
         </nav>
         
