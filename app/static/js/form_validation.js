@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
         addBadgeBtn.disabled = currentUploads >= maxBadgeUploads;
 
         if (currentUploads >= maxBadgeUploads) {
-            addBadgeBtn.style.display = "none";
+            addBadgeBtn.style.display = "disable"
         } else {
             addBadgeBtn.style.display = "block";
         }
@@ -261,14 +261,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const fileInputs = document.querySelectorAll("input[type='file'][data-existing]");
         fileInputs.forEach(input => {
             if (input.files.length === 0 && input.dataset.existing) {
-                // Create a hidden input to retain the existing file
                 const hiddenInput = document.createElement("input");
                 hiddenInput.type = "hidden";
-                hiddenInput.name = input.name; // Use the same name as the file input
+                hiddenInput.name = input.name;
                 hiddenInput.value = input.dataset.existing;
                 form.appendChild(hiddenInput);
-    
-                // Remove the empty file input to prevent overwriting
                 input.removeAttribute("name");
             }
         });
