@@ -385,23 +385,44 @@ def judges_ballot():
 def judges_results():
     from sqlalchemy import func
 
-    # Aggregate scores by submission
+    # Aggregate scores for each artwork (BadgeArtwork)
     results = db.session.query(
-        ArtistSubmission.id,
-        ArtistSubmission.name,
-        func.sum(JudgeVote.rank).label("total_score"),
-        Badge.name.label("badge_name")
+        ArtistSubmission.name.label("artist_name"),
+        Badge.name.label("badge_name"),
+        BadgeArtwork.id.label("badge_artwork_id"),
+        BadgeArtwork.artwork_file.label("artwork_file"),
+        func.sum(JudgeVote.rank).label("total_score")
     ).join(
-        JudgeVote, JudgeVote.submission_id == ArtistSubmission.id
+        BadgeArtwork, BadgeArtwork.id == JudgeVote.badge_artwork_id
     ).join(
-        BadgeArtwork, BadgeArtwork.submission_id == ArtistSubmission.id
+        ArtistSubmission, ArtistSubmission.id == BadgeArtwork.submission_id
     ).join(
-        Badge, BadgeArtwork.badge_id == Badge.id
+        Badge, Badge.id == BadgeArtwork.badge_id
     ).group_by(
-        ArtistSubmission.id, Badge.name
+        BadgeArtwork.id, ArtistSubmission.name, Badge.name, BadgeArtwork.artwork_file
     ).order_by(
         func.sum(JudgeVote.rank)  # Lower score = higher ranking
-    )
+    ).all()
+
+    # Fetch individual judge votes for each artwork
+    judge_votes = db.session.query(
+        JudgeVote.badge_artwork_id,
+        Judge.name.label("judge_name"),
+        JudgeVote.rank
+    ).join(
+        Judge, Judge.id == JudgeVote.judge_id
+    ).all()
+
+    # Organize judge votes by badge_artwork_id
+    judge_votes_by_artwork = {}
+    for vote in judge_votes:
+        artwork_id = vote.badge_artwork_id
+        if artwork_id not in judge_votes_by_artwork:
+            judge_votes_by_artwork[artwork_id] = []
+        judge_votes_by_artwork[artwork_id].append({
+            "judge_name": vote.judge_name,
+            "rank": vote.rank
+        })
 
     # Fetch distinct judge IDs who have voted
     voted_judges_ids = db.session.query(JudgeVote.judge_id).distinct().all()
@@ -418,8 +439,12 @@ def judges_results():
         "not_voted": [judge.name for judge in all_judges if judge.name not in voted_judges],
     }
 
-    return render_template("judges_results.html", results=results, judges_status=judges_status)
-
+    return render_template(
+        "judges_results.html",
+        results=results,
+        judge_votes_by_artwork=judge_votes_by_artwork,
+        judges_status=judges_status
+    )
 
 
 @app.route("/judges/submission-success")
@@ -637,30 +662,57 @@ def manage_judges():
     return render_template("manage_judges.html", judges=judges)
 
 
-@app.route("/api/artwork-detail/<int:submission_id>", methods=["GET"])
-def api_artwork_detail(submission_id):
-    submission = ArtistSubmission.query.options(joinedload(ArtistSubmission.badge_artworks)).get(submission_id)
-    if not submission:
-        return jsonify({"error": "Submission not found"}), 404
+@app.route("/api/artwork-detail/<int:item_id>", methods=["GET"])
+def api_artwork_detail(item_id):
+    # Attempt to fetch as BadgeArtwork first
+    badge_artwork = BadgeArtwork.query.options(joinedload(BadgeArtwork.submission)).filter_by(id=item_id).first()
+    if badge_artwork:
+        # If found, return details specific to BadgeArtwork
+        submission = badge_artwork.submission
+        artwork_details = {
+            "name": submission.name,
+            "email": submission.email,
+            "artist_bio": submission.artist_bio,
+            "portfolio_link": submission.portfolio_link,
+            "statement": submission.statement,
+            "demographic_identity": submission.demographic_identity,
+            "lane_county_connection": submission.lane_county_connection,
+            "accessibility_needs": submission.accessibility_needs,
+            "future_engagement": submission.future_engagement,
+            "badge_artworks": [
+                {
+                    "badge_id": badge_artwork.badge_id,
+                    "artwork_file": url_for('static', filename=f"submissions/{badge_artwork.artwork_file}", _external=True)
+                }
+            ],
+            "opt_in_featured_artwork": submission.opt_in_featured_artwork
+        }
+        return jsonify(artwork_details)
 
-    badge_artworks = [
-        {
-            "badge_id": artwork.badge_id,
-            "artwork_file": url_for('static', filename=f"submissions/{artwork.artwork_file}", _external=True)
-        } for artwork in submission.badge_artworks
-    ]
+    # If not a BadgeArtwork, attempt to fetch as ArtistSubmission
+    submission = ArtistSubmission.query.options(joinedload(ArtistSubmission.badge_artworks)).filter_by(id=item_id).first()
+    if submission:
+        # If found, return details specific to ArtistSubmission
+        badge_artworks = [
+            {
+                "badge_id": artwork.badge_id,
+                "artwork_file": url_for('static', filename=f"submissions/{artwork.artwork_file}", _external=True)
+            } for artwork in submission.badge_artworks
+        ]
+        submission_details = {
+            "name": submission.name,
+            "email": submission.email,
+            "artist_bio": submission.artist_bio,
+            "portfolio_link": submission.portfolio_link,
+            "statement": submission.statement,
+            "demographic_identity": submission.demographic_identity,
+            "lane_county_connection": submission.lane_county_connection,
+            "accessibility_needs": submission.accessibility_needs,
+            "future_engagement": submission.future_engagement,
+            "badge_artworks": badge_artworks,
+            "opt_in_featured_artwork": submission.opt_in_featured_artwork
+        }
+        return jsonify(submission_details)
 
-    artwork_details = {
-        "name": submission.name,
-        "email": submission.email,
-        "artist_bio": submission.artist_bio,
-        "portfolio_link": submission.portfolio_link,
-        "statement": submission.statement,
-        "demographic_identity": submission.demographic_identity,
-        "lane_county_connection": submission.lane_county_connection,
-        "accessibility_needs": submission.accessibility_needs,
-        "future_engagement": submission.future_engagement,
-        "badge_artworks": badge_artworks,
-        "opt_in_featured_artwork": submission.opt_in_featured_artwork
-    }
-    return jsonify(artwork_details)
+    # If neither is found, return an error
+    return jsonify({"error": "Item not found"}), 404
