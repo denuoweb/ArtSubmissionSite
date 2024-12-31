@@ -547,7 +547,7 @@ def judges_ballot():
 def judges_results():
     from sqlalchemy import func
 
-    # Aggregate scores for each artwork (BadgeArtwork)
+    # Aggregate scores for each artwork (BadgeArtwork) - General Submissions
     results = db.session.query(
         ArtistSubmission.name.label("artist_name"),
         Badge.name.label("badge_name"),
@@ -566,7 +566,25 @@ def judges_results():
         func.sum(JudgeVote.rank)  # Lower score = higher ranking
     ).all()
 
-    # Fetch individual judge votes for each artwork
+    # Aggregate scores for Youth Submissions
+    youth_results = db.session.query(
+        YouthArtistSubmission.name.label("artist_name"),
+        YouthArtistSubmission.age.label("age"),
+        Badge.name.label("badge_name"),
+        YouthArtistSubmission.id.label("youth_artwork_id"),
+        YouthArtistSubmission.artwork_file.label("artwork_file"),
+        func.sum(JudgeVote.rank).label("total_score")
+    ).join(
+        JudgeVote, YouthArtistSubmission.id == JudgeVote.submission_id  # Link JudgeVote to YouthArtistSubmission
+    ).join(
+        Badge, YouthArtistSubmission.badge_id == Badge.id
+    ).group_by(
+        YouthArtistSubmission.id, YouthArtistSubmission.name, YouthArtistSubmission.age, Badge.name, YouthArtistSubmission.artwork_file
+    ).order_by(
+        func.sum(JudgeVote.rank)  # Lower score = higher ranking
+    ).all()
+
+    # Fetch individual judge votes for each artwork - General Submissions
     judge_votes = db.session.query(
         JudgeVote.badge_artwork_id,
         Judge.name.label("judge_name"),
@@ -575,7 +593,16 @@ def judges_results():
         Judge, Judge.id == JudgeVote.judge_id
     ).all()
 
-    # Organize judge votes by badge_artwork_id
+    # Fetch individual judge votes for youth submissions
+    youth_judge_votes = db.session.query(
+        JudgeVote.submission_id.label("youth_submission_id"),
+        Judge.name.label("judge_name"),
+        JudgeVote.rank
+    ).join(
+        Judge, Judge.id == JudgeVote.judge_id
+    ).all()
+
+    # Organize judge votes by badge_artwork_id (General Submissions)
     judge_votes_by_artwork = {}
     for vote in judge_votes:
         artwork_id = vote.badge_artwork_id
@@ -586,13 +613,24 @@ def judges_results():
             "rank": vote.rank
         })
 
+    # Organize judge votes by youth_submission_id
+    judge_votes_by_youth_submission = {}
+    for vote in youth_judge_votes:
+        submission_id = vote.youth_submission_id
+        if submission_id not in judge_votes_by_youth_submission:
+            judge_votes_by_youth_submission[submission_id] = []
+        judge_votes_by_youth_submission[submission_id].append({
+            "judge_name": vote.judge_name,
+            "rank": vote.rank
+        })
+
     # Fetch distinct judge IDs who have voted
     voted_judges_ids = db.session.query(JudgeVote.judge_id).distinct().all()
-    voted_judges_ids = [judge_id[0] for judge_id in voted_judges_ids]  # Extract IDs from query result
+    voted_judges_ids = [judge_id[0] for judge_id in voted_judges_ids]
 
     # Get the names of judges who have voted
     voted_judges = db.session.query(Judge.name).filter(Judge.id.in_(voted_judges_ids)).all()
-    voted_judges = [judge[0] for judge in voted_judges]  # Extract names from query result
+    voted_judges = [judge[0] for judge in voted_judges]
 
     # Fetch all judge names and determine who has not voted
     all_judges = db.session.query(Judge).all()
@@ -604,9 +642,12 @@ def judges_results():
     return render_template(
         "judges_results.html",
         results=results,
+        youth_results=youth_results,
         judge_votes_by_artwork=judge_votes_by_artwork,
+        judge_votes_by_youth_submission=judge_votes_by_youth_submission,
         judges_status=judges_status
     )
+
 
 
 @app.route("/judges/submission-success")

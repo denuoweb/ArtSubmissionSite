@@ -13,48 +13,132 @@
 
 <p>Below are the aggregated rankings of artist submissions based on the judges' votes:</p>
 
-{% if results %}
-<table id="resultsTable" class="table table-striped">
-    <thead>
-        <tr>
-            <th>Rank</th>
-            <th>Artist Name</th>
-            <th>Badge Name</th>
-            <th>Artwork</th>
-            <th>Score (Lower is Better)</th>
-            <th>Judge Votes</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for artwork in results %}
-        <tr>
-            <td>{{ loop.index }}</td>
-            <td>{{ artwork.artist_name }}</td>
-            <td>{{ artwork.badge_name }}</td>
-            <td>
-                <a href="#" 
-                   class="artwork-thumbnail" 
-                   data-artwork-url="{{ url_for('static', filename=artwork.artwork_file) }}" 
-                   data-name="{{ artwork.artist_name }}" 
-                   data-id="{{ artwork.badge_artwork_id }}" 
-                   onclick="return false;">View Artwork</a>
-            </td>
-            <td>{{ artwork.total_score }}</td>
-            <td>
-                <ul>
-                    {% for vote in judge_votes_by_artwork[artwork.badge_artwork_id] %}
-                    <li>{{ vote.judge_name }}: Rank {{ vote.rank }}</li>
-                    {% endfor %}
-                </ul>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<!-- Tabs Navigation -->
+<ul class="nav nav-tabs" id="resultsTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button 
+            class="nav-link active" 
+            id="regular-results-tab" 
+            data-bs-toggle="tab" 
+            data-bs-target="#regular-results" 
+            type="button" 
+            role="tab" 
+            aria-controls="regular-results" 
+            aria-selected="true">
+            Regular Results
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button 
+            class="nav-link" 
+            id="youth-results-tab" 
+            data-bs-toggle="tab" 
+            data-bs-target="#youth-results" 
+            type="button" 
+            role="tab" 
+            aria-controls="youth-results" 
+            aria-selected="false">
+            Youth Results
+        </button>
+    </li>
+</ul>
 
-{% else %}
-<p id="noResultsMessage">No results are available yet. Judges need to submit their votes first.</p>
-{% endif %}
+<!-- Tabs Content -->
+<div class="tab-content mt-3">
+    <!-- Regular Results Tab -->
+    <div class="tab-pane fade show active" id="regular-results" role="tabpanel" aria-labelledby="regular-tab">
+        <h2>General Submissions</h2>
+        {% if results %}
+        <table id="resultsTable" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Artist Name</th>
+                    <th>Badge Name</th>
+                    <th>Artwork</th>
+                    <th>Score (Lower is Better)</th>
+                    <th>Judge Votes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for artwork in results %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ artwork.artist_name }}</td>
+                    <td>{{ artwork.badge_name }}</td>
+                    <td>
+                        <a href="#" 
+                           class="artwork-thumbnail" 
+                           data-artwork-url="{{ url_for('static', filename=artwork.artwork_file) }}" 
+                           data-name="{{ artwork.artist_name }}" 
+                           data-id="{{ artwork.badge_artwork_id }}" 
+                           onclick="return false;">View Artwork</a>
+                    </td>
+                    <td>{{ artwork.total_score }}</td>
+                    <td>
+                        <ul>
+                            {% for vote in judge_votes_by_artwork[artwork.badge_artwork_id] %}
+                            <li>{{ vote.judge_name }}: Rank {{ vote.rank }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p id="noResultsMessage">No results are available yet. Judges need to submit their votes first.</p>
+        {% endif %}
+    </div>
+
+    <!-- Youth Results Tab -->
+    <div class="tab-pane fade" id="youth-results" role="tabpanel" aria-labelledby="youth-tab">
+        <h2>Youth Submissions</h2>
+        {% if youth_results %}
+        <table id="youthResultsTable" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Artist Name</th>
+                    <th>Age</th>
+                    <th>Badge Name</th>
+                    <th>Artwork</th>
+                    <th>Score (Lower is Better)</th>
+                    <th>Judge Votes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for artwork in youth_results %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ artwork.artist_name }}</td>
+                    <td>{{ artwork.age }}</td>
+                    <td>{{ artwork.badge_name }}</td>
+                    <td>
+                        <a href="#" 
+                           class="artwork-thumbnail" 
+                           data-artwork-url="{{ url_for('static', filename=artwork.artwork_file) }}" 
+                           data-name="{{ artwork.artist_name }}" 
+                           data-id="{{ artwork.youth_artwork_id }}" 
+                           onclick="return false;">View Artwork</a>
+                    </td>
+                    <td>{{ artwork.total_score }}</td>
+                    <td>
+                        <ul>
+                            {% for vote in judge_votes_by_youth_submission[artwork.youth_artwork_id] %}
+                            <li>{{ vote.judge_name }}: Rank {{ vote.rank }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p id="noYouthResultsMessage">No youth results are available yet. Judges need to submit their votes first.</p>
+        {% endif %}
+    </div>
+</div>
 
 <!-- Voting Status -->
 <h2>Judge Voting Status</h2>
@@ -115,7 +199,9 @@
 </div>
 
 {% endblock %}
+
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/artwork_modal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/results.js') }}"></script>
+
 {% endblock %}

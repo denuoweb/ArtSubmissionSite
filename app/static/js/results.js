@@ -1,3 +1,14 @@
+document.addEventListener("DOMContentLoaded", function () {
+    var triggerTabList = [].slice.call(document.querySelectorAll('#resultsTabs button'));
+    triggerTabList.forEach(function (triggerEl) {
+        var tabTrigger = new bootstrap.Tab(triggerEl);
+        triggerEl.addEventListener('click', function (event) {
+            event.preventDefault();
+            tabTrigger.show();
+        });
+    });
+});
+
 document.getElementById("clearVotesButton").addEventListener("click", function () {
     if (!confirm("Are you sure you want to clear all votes? This action cannot be undone.")) {
         return; // Exit if the user cancels the confirmation
