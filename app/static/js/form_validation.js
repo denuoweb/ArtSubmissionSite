@@ -1,5 +1,3 @@
-// form_handler.js
-
 document.addEventListener("DOMContentLoaded", () => {
     const maxBadgeUploads = 3;  // Maximum number of badge uploads allowed
     const addBadgeBtn = document.getElementById("addBadgeUpload");
