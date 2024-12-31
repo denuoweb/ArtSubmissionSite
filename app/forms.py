@@ -62,10 +62,10 @@ class ArtistSubmissionForm(FlaskForm):
         render_kw={"placeholder": "Enter your phone number"}
     )
     artist_bio = TextAreaField(
-        "Artist Bio", 
+        "Artist Bio (1,000 to 2,500 characters)", 
         validators=[
             DataRequired(message="Please provide a brief artist bio."),
-            Length(min=1000, max=1500, message="Bio must be between 1,000 to 1,500 characters.")
+            Length(min=1000, max=2500, message="Bio must be between 1,000 to 2,500 characters.")
         ],
         render_kw={"placeholder": "Write a brief bio about yourself."}
     )
@@ -73,18 +73,17 @@ class ArtistSubmissionForm(FlaskForm):
         "Portfolio Link", 
         validators=[
             Optional(),
-            URL(message="Please provide a valid URL."),
             Length(max=255, message="Portfolio URL cannot exceed 255 characters.")
         ],
         render_kw={"placeholder": "Provide a link to your online portfolio (if available)"}
     )
     statement = TextAreaField(
-        "Statement of Interest", 
+        "Statement of Interest (1,000 to 2,500 characters)", 
         validators=[
             DataRequired(message="Please provide your statement of interest."),
-            Length(min=1000, max=1500, message="Statement must be between 1,000 to 1,500 characters.")
+            Length(min=1000, max=2500, message="Statement must be between 1,000 to 2,500 characters.")
         ],
-        render_kw={"placeholder": "Why do you want to contribute? How does your work reflect diversity?"}
+        render_kw={"placeholder": "Why do you want to contribute? How does your work reflect bicycling?"}
     )
     
     # Badge Uploads
@@ -99,15 +98,15 @@ class ArtistSubmissionForm(FlaskForm):
     
     # Demographic Information
     demographic_identity = StringField(
-        "How do you identify?",
+        "How would you describe your identity?",
         validators=[
             Optional(),
             Length(max=200, message="Identity description cannot exceed 200 characters.")
         ],
-        render_kw={"placeholder": "Race, ethnicity, gender identity, or age)"}
+        render_kw={"placeholder": "Race, ethnicity, gender identity, or age"}
     )
     lane_county_connection = TextAreaField(
-        "Are you a resident of Lane County or connected to the local community?",
+        "Are you a resident of Lane County or connected to the local community? (500 characters max)",
         validators=[
             Optional(),
             Length(max=500, message="Response cannot exceed 500 characters.")
@@ -115,15 +114,15 @@ class ArtistSubmissionForm(FlaskForm):
         render_kw={"placeholder": "Describe your connection to Lane County."}
     )
     accessibility_needs = TextAreaField(
-        "Do you have any accessibility needs we can accommodate?",
+        "Do you have any accessibility needs we can accommodate?  (500 characters max)",
         validators=[
             Optional(),
-            Length(max=500, message="Response cannot exceed 500 characters.")
+            Length(max=500, message="Response cannot exceed 500 characters. (500 characters max)")
         ],
         render_kw={"placeholder": "Translation services, assistance, etc."}
     )
     future_engagement = TextAreaField(
-        "Are you interested in being involved in future projects?",
+        "Are you interested in being involved in future projects? (500 characters max)",
         validators=[
             Optional(),
             Length(max=500, message="Response cannot exceed 500 characters.")
