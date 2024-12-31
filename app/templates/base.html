@@ -6,6 +6,11 @@
     <title>Quest by Cycle Badge Submission</title>
     <!-- Link to your Earth Day–themed CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="preload" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}"></noscript>
+    
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+
 </head>
 <body>
     <div class="container">
