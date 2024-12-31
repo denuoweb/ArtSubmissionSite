@@ -10,6 +10,11 @@
 <!-- Rankings Form -->
 <form method="POST" id="ranking-form" class="d-flex flex-column">
     {{ form.csrf_token }}
+
+    <!-- Submit Rankings -->
+    <input type="hidden" name="rank" id="rank-input">
+    <button type="submit" class="btn btn-primary mt-4 w-100">Submit Rankings</button>
+    
     <div id="rankings-list" class="d-flex flex-wrap gap-3">
         {% for submission in artist_submissions %}
         <div 
@@ -46,10 +51,6 @@
         </div>
         {% endfor %}
     </div>
-
-    <!-- Submit Rankings -->
-    <input type="hidden" name="rank" id="rank-input">
-    <button type="submit" class="btn btn-primary mt-4 w-100">Submit Rankings</button>
 </form>
 
 <!-- Artwork Modal -->
