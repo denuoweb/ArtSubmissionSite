@@ -1,4 +1,13 @@
 document.addEventListener("DOMContentLoaded", function () {
+    var triggerTabList = [].slice.call(document.querySelectorAll('#ballotTabs button'));
+    triggerTabList.forEach(function (triggerEl) {
+        var tabTrigger = new bootstrap.Tab(triggerEl);
+        triggerEl.addEventListener('click', function (event) {
+            event.preventDefault();
+            tabTrigger.show();
+        });
+    });
+    
     const rankingsList = document.getElementById("rankings-list");
     const rankInput = document.getElementById("rank-input");
     const rankingForm = document.querySelector("#ranking-form");
@@ -9,6 +18,19 @@ document.addEventListener("DOMContentLoaded", function () {
         onEnd: function () {
             updateRankings(); // Update rankings display and hidden input
             autoSaveRankings(); // Trigger auto-save on reorder
+        },
+    });
+
+    // Enable drag-and-drop ranking for youth submissions
+    const youthRankingsList = document.getElementById("youth-rankings-list");
+    const youthRankInput = document.getElementById("youth-rank-input");
+
+    Sortable.create(youthRankingsList, {
+        animation: 150,
+        onEnd: function () {
+            const rankedItems = Array.from(youthRankingsList.querySelectorAll(".rank-item"));
+            const rankings = rankedItems.map((item) => item.getAttribute("data-id"));
+            youthRankInput.value = rankings.join(",");
         },
     });
 

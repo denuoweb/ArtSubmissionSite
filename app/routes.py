@@ -417,7 +417,22 @@ def judges_ballot():
         Badge, BadgeArtwork.badge_id == Badge.id
     ).distinct().all()  # Eliminate duplicates with DISTINCT
 
-    # Retrieve existing votes for the current judge
+    # Fetch all youth submissions
+    youth_submissions = db.session.query(
+        YouthArtistSubmission.id,
+        YouthArtistSubmission.name,
+        YouthArtistSubmission.age,
+        YouthArtistSubmission.email,
+        YouthArtistSubmission.about_why_design,
+        YouthArtistSubmission.about_yourself,
+        YouthArtistSubmission.artwork_file.label("artwork_file"),
+        Badge.id.label("badge_id"),
+        Badge.name.label("badge_name"),
+    ).join(
+        Badge, YouthArtistSubmission.badge_id == Badge.id
+    ).distinct().all()
+
+    # Prepare artist submissions
     saved_votes = db.session.query(JudgeVote).filter_by(judge_id=judge_id).order_by(JudgeVote.rank).all()
     ranked_submission_ids = [vote.submission_id for vote in saved_votes]
 
@@ -430,54 +445,103 @@ def judges_ballot():
         unranked_submissions = [
             submission for submission in artist_submissions if submission.id not in ranked_submission_ids
         ]
-        prepared_submissions = ranked_submissions + unranked_submissions
+        prepared_artist_submissions = ranked_submissions + unranked_submissions
     else:
         # If no votes exist, randomize submissions
         import random
         random.shuffle(artist_submissions)
-        prepared_submissions = artist_submissions
+        prepared_artist_submissions = artist_submissions
+
+    # Prepare youth submissions (similar logic)
+    saved_youth_votes = db.session.query(JudgeVote).filter_by(judge_id=judge_id).order_by(JudgeVote.rank).all()
+    ranked_youth_submission_ids = [vote.submission_id for vote in saved_youth_votes]
+
+    if saved_youth_votes:
+        # If votes exist, use saved order
+        ranked_youth_submissions = [
+            submission for submission in youth_submissions if submission.id in ranked_youth_submission_ids
+        ]
+        ranked_youth_submissions.sort(key=lambda s: ranked_youth_submission_ids.index(s.id))
+        unranked_youth_submissions = [
+            submission for submission in youth_submissions if submission.id not in ranked_youth_submission_ids
+        ]
+        prepared_youth_submissions = ranked_youth_submissions + unranked_youth_submissions
+    else:
+        # If no votes exist, randomize youth submissions
+        random.shuffle(youth_submissions)
+        prepared_youth_submissions = youth_submissions
 
     # CSRF form
     form = RankingForm()
 
     # Save rankings when submitted
     if request.method == "POST":
+        # Process rankings for regular artist submissions
         ranked_votes = request.form.get("rank", "")
         if ranked_votes:
             ranked_votes = ranked_votes.split(",")  # Convert to a list of submission IDs
-            rank = 1  # Initialize rank counter manually
+            rank = 1
             try:
                 with db.session.begin_nested():
                     # Clear existing votes for this judge
                     JudgeVote.query.filter_by(judge_id=judge_id).delete()
 
-                    # Save new rankings
+                    # Save new rankings for artist submissions
                     for submission_id in ranked_votes:
-                        # Fetch the corresponding BadgeArtwork for the submission_id
                         badge_artwork = BadgeArtwork.query.filter_by(submission_id=submission_id).first()
                         if not badge_artwork:
                             flash(f"No BadgeArtwork found for submission ID {submission_id}.", "danger")
                             return redirect(url_for("judges_ballot"))
 
-                        # Create a new vote with badge_artwork_id
                         vote = JudgeVote(
                             judge_id=judge_id,
                             submission_id=int(submission_id),
                             rank=rank,
-                            badge_artwork_id=badge_artwork.id  # Associate the vote with the correct badge_artwork_id
+                            badge_artwork_id=badge_artwork.id
                         )
                         db.session.add(vote)
-                        rank += 1  # Increment rank manually
+                        rank += 1
+
                 db.session.commit()
-                # Redirect to the success page
-                return redirect(url_for("judges_submission_success"))
             except Exception as e:
                 db.session.rollback()
-                app.logger.error(f"Error saving rankings: {e}")
-                flash("An error occurred while saving your rankings. Please try again.", "danger")
+                app.logger.error(f"Error saving artist rankings: {e}")
+                flash("An error occurred while saving artist rankings. Please try again.", "danger")
                 return redirect(url_for("judges_ballot"))
 
-    return render_template("judges_ballot.html", artist_submissions=prepared_submissions, form=form)
+        # Process rankings for youth submissions
+        ranked_youth_votes = request.form.get("youth_rank", "")
+        if ranked_youth_votes:
+            ranked_youth_votes = ranked_youth_votes.split(",")  # Convert to a list of submission IDs
+            rank = 1
+            try:
+                with db.session.begin_nested():
+                    # Save new rankings for youth submissions
+                    for submission_id in ranked_youth_votes:
+                        vote = JudgeVote(
+                            judge_id=judge_id,
+                            submission_id=int(submission_id),
+                            rank=rank
+                        )
+                        db.session.add(vote)
+                        rank += 1
+
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                app.logger.error(f"Error saving youth rankings: {e}")
+                flash("An error occurred while saving youth rankings. Please try again.", "danger")
+                return redirect(url_for("judges_ballot"))
+
+        return redirect(url_for("judges_submission_success"))
+
+    return render_template(
+        "judges_ballot.html",
+        artist_submissions=prepared_artist_submissions,
+        youth_submissions=prepared_youth_submissions,
+        form=form
+    )
+
 
 @app.route("/judges/results", methods=["GET"])
 def judges_results():
