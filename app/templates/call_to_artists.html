@@ -50,20 +50,10 @@
     <a href="mailto:info@QuestByCycle.org">info@QuestByCycle.org</a>.
 </p>
 
-<h2>How to Apply</h2>
-<p>
-    Create the badge artwork and complete the contest application below by the deadline. Attach all badge image files as JPG, PNG, or SVG.
-</p>
-
 <h2>Badge List</h2>
 <p id="badge-list">
     A complete list of the badges to choose from is available 
     <a href="#" onclick="openBadgeModal()">here</a>. Each badge represents a specific quest, such as cycling to local landmarks, participating in community events, or promoting sustainability.
-</p>
-
-<h2>Legal and Ownership</h2>
-<p>
-    By submitting your artwork, you agree that Quest by Cycle retains the rights to use your design in the game, promotional materials, and related media. For questions regarding intellectual property, please email us.
 </p>
 
 <h2>Submission Period</h2>
@@ -112,22 +102,28 @@
 
     <!-- Badge Design Information -->
     <div id="badgeUploadContainer">
-        {% for badge_upload in form.badge_uploads %}
-        <fieldset class="badge-upload-unit border p-3 mb-3">
-            <legend>Badge Upload {{ loop.index }}</legend>
-            <div class="mb-3">
-                <label for="{{ badge_upload.form.badge_id.id }}">{{ badge_upload.form.badge_id.label }}</label>
-                {{ badge_upload.form.badge_id(class_="form-select", id=badge_upload.form.badge_id.id) }}
-                <div class="invalid-feedback" id="{{ badge_upload.form.badge_id.id }}-error">Please select a badge.</div>
-            </div>
-            <div class="mb-3">
-                <label for="{{ badge_upload.form.artwork_file.id }}">{{ badge_upload.form.artwork_file.label }}</label>
-                {{ badge_upload.form.artwork_file(class_="form-control", id=badge_upload.form.artwork_file.id) }}
-            </div>
-            <button type="button" class="btn btn-danger btn-sm removeBadgeUpload">Remove</button>
-        </fieldset>
+        {% for badge_data in previous_badge_data %}
+            <fieldset class="badge-upload-unit border p-3 mb-3">
+                <legend>Badge Upload {{ loop.index }}</legend>
+                <div class="mb-3">
+                    <label for="badge_uploads-{{ loop.index0 }}-badge_id">Select a Badge</label>
+                    <select class="form-select" id="badge_uploads-{{ loop.index0 }}-badge_id" name="badge_uploads-{{ loop.index0 }}-badge_id" required>
+                        <option value="" disabled>Select a Badge</option>
+                        {% for badge in badges %}
+                            <option value="{{ badge.id }}" {% if badge.id == badge_data.badge_id %}selected{% endif %}>
+                                {{ badge.name }}: {{ badge.description }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="badge_uploads-{{ loop.index0 }}-artwork_file">Upload Artwork</label>
+                    <input type="file" class="form-control" id="badge_uploads-{{ loop.index0 }}-artwork_file" name="badge_uploads-{{ loop.index0 }}-artwork_file" accept=".jpg,.jpeg,.png,.svg" {% if badge_data.artwork_file %}data-existing="{{ badge_data.artwork_file }}"{% endif %}>
+                </div>
+            </fieldset>
         {% endfor %}
     </div>
+
 
     <button type="button" id="addBadgeUpload" class="btn btn-primary">Add Badge Upload</button>
 
