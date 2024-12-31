@@ -1,7 +1,7 @@
 from flask import jsonify, render_template, request, redirect, url_for, flash, jsonify, session, abort
 from app import app, db
-from app.models import ArtistSubmission, Judge, JudgeVote, Badge, BadgeArtwork
-from app.forms import ArtistSubmissionForm, PasswordForm, RankingForm
+from app.models import ArtistSubmission, YouthArtistSubmission, Judge, JudgeVote, Badge, BadgeArtwork
+from app.forms import ArtistSubmissionForm, PasswordForm, RankingForm, YouthArtistSubmissionForm
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import joinedload
@@ -91,6 +91,8 @@ def admin_page():
     # Re-fetch judges after any updates
     judges = Judge.query.all()
     return render_template("admin.html", judges=judges, submission_status=submission_status)
+
+
 @app.route("/call_to_artists", methods=["GET", "POST"])
 def call_to_artists():
     submission_open = is_submission_open()
@@ -222,10 +224,91 @@ def call_to_artists():
         submission_deadline=submission_deadline
     )
 
+@app.route("/call_to_youth_artists", methods=["GET", "POST"])
+def call_to_youth_artists():
+    submission_open = is_submission_open()
+    submission_status = "Open" if submission_open else "Closed"
+    submission_deadline = SUBMISSION_END.strftime("%B %d, %Y at %I:%M %p %Z")
 
-@app.route("/youth-artists")
-def youth_artists():
-    return render_template("youth_artists.html")
+    if not submission_open:
+        flash("Submissions are currently closed.", "danger")
+        return redirect(url_for("index"))
+
+    form = YouthArtistSubmissionForm()
+
+    # Populate badge choices for the `badge_id` field
+    badges = Badge.query.all()
+    badge_choices = [(badge.id, badge.name) for badge in badges]
+    form.badge_id.choices = badge_choices
+
+    if request.method == "POST":
+        if not form.validate_on_submit():
+            for field_name, errors in form.errors.items():
+                for error in errors:
+                    flash(f"{field_name}: {error}", "danger")
+            return render_template(
+                "call_to_youth_artists.html",
+                form=form,
+                badges=badges,
+                submission_status=submission_status,
+                submission_deadline=submission_deadline
+            )
+        else:
+            try:
+                # Save form data to the database
+                name = form.name.data
+                age = form.age.data
+                parent_contact_info = form.parent_contact_info.data
+                email = form.email.data
+                about_why_design = form.about_why_design.data
+                about_yourself = form.about_yourself.data
+                badge_id = form.badge_id.data
+                artwork_file = form.artwork_file.data
+
+                # Validate badge
+                if not Badge.query.get(int(badge_id)):
+                    flash("Invalid badge selection.", "danger")
+                    return redirect(url_for("call_to_youth_artists"))
+
+                # Save file
+                file_ext = os.path.splitext(artwork_file.filename)[1]
+                if not file_ext:
+                    flash("Invalid file extension for uploaded file.", "danger")
+                    return redirect(url_for("call_to_youth_artists"))
+
+                unique_filename = f"{uuid.uuid4()}{file_ext}"
+                artwork_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
+                artwork_file.save(artwork_path)
+
+                # Save submission
+                submission = YouthArtistSubmission(
+                    name=name,
+                    age=age,
+                    parent_contact_info=parent_contact_info,
+                    email=email,
+                    about_why_design=about_why_design,
+                    about_yourself=about_yourself,
+                    badge_id=int(badge_id),
+                    artwork_file=unique_filename
+                )
+                db.session.add(submission)
+                db.session.commit()
+
+                flash("Submission received successfully!", "success")
+                return redirect(url_for("submission_success"))
+
+            except Exception as e:
+                db.session.rollback()
+                flash("An error occurred while processing your submission. Please try again.", "danger")
+                app.logger.error(f"Error processing youth submission: {e}")
+
+    return render_template(
+        "call_to_youth_artists.html",
+        form=form,
+        badges=badges,
+        submission_status=submission_status,
+        submission_deadline=submission_deadline
+    )
 
 @app.route("/submission-success")
 def submission_success():
@@ -338,17 +421,21 @@ def judges_ballot():
     saved_votes = db.session.query(JudgeVote).filter_by(judge_id=judge_id).order_by(JudgeVote.rank).all()
     ranked_submission_ids = [vote.submission_id for vote in saved_votes]
 
-    # Sort submissions: ranked first, unranked later
-    ranked_submissions = [
-        submission for submission in artist_submissions if submission.id in ranked_submission_ids
-    ]
-    ranked_submissions.sort(key=lambda s: ranked_submission_ids.index(s.id))
-
-    unranked_submissions = [
-        submission for submission in artist_submissions if submission.id not in ranked_submission_ids
-    ]
-
-    prepared_submissions = ranked_submissions + unranked_submissions
+    if saved_votes:
+        # If votes exist, use saved order
+        ranked_submissions = [
+            submission for submission in artist_submissions if submission.id in ranked_submission_ids
+        ]
+        ranked_submissions.sort(key=lambda s: ranked_submission_ids.index(s.id))
+        unranked_submissions = [
+            submission for submission in artist_submissions if submission.id not in ranked_submission_ids
+        ]
+        prepared_submissions = ranked_submissions + unranked_submissions
+    else:
+        # If no votes exist, randomize submissions
+        import random
+        random.shuffle(artist_submissions)
+        prepared_submissions = artist_submissions
 
     # CSRF form
     form = RankingForm()
@@ -391,7 +478,6 @@ def judges_ballot():
                 return redirect(url_for("judges_ballot"))
 
     return render_template("judges_ballot.html", artist_submissions=prepared_submissions, form=form)
-
 
 @app.route("/judges/results", methods=["GET"])
 def judges_results():

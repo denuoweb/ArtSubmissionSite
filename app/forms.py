@@ -1,7 +1,7 @@
 
 from flask_wtf import FlaskForm
-from wtforms import Form, FormField, HiddenField, FieldList, BooleanField, PasswordField, StringField, TextAreaField, FileField, SubmitField, SelectField
-from wtforms.validators import Regexp, DataRequired, Email, URL, Optional, Length, ValidationError
+from wtforms import Form, FormField, IntegerField, HiddenField, FieldList, BooleanField, PasswordField, StringField, TextAreaField, FileField, SubmitField, SelectField
+from wtforms.validators import Regexp, NumberRange, DataRequired, Email, URL, Optional, Length, ValidationError
 from flask_wtf.file import FileAllowed
 from urllib.parse import urlparse
 import re
@@ -143,6 +143,84 @@ class ArtistSubmissionForm(FlaskForm):
     
     # Submit Button
     submit = SubmitField("Submit")
+
+class YouthArtistSubmissionForm(FlaskForm):
+    # Personal Information
+    name = StringField(
+        "Name (First and Last)",
+        validators=[
+            DataRequired(message="Your name is required."),
+            Length(max=100, message="Name cannot exceed 100 characters.")
+        ],
+        render_kw={"placeholder": "Enter your full name"}
+    )
+    age = IntegerField(
+        "Age",
+        validators=[
+            DataRequired(message="Your age is required."),
+            NumberRange(min=13, max=17, message="Age must be between 13 and 18.")
+        ],
+        render_kw={"placeholder": "Enter your age"}
+    )
+    parent_contact_info = TextAreaField(
+        "Parent/Guardian Name and Contact Information",
+        validators=[
+            DataRequired(message="Parent/Guardian contact information is required."),
+            Length(max=300, message="Contact information cannot exceed 300 characters.")
+        ],
+        render_kw={"placeholder": "Enter name, phone number, and/or email of parent/guardian"}
+    )
+    email = StringField(
+        "Email Address",
+        validators=[
+            DataRequired(message="Your email address is required."),
+            Email(message="Please provide a valid email address.")
+        ],
+        render_kw={"placeholder": "Enter your contact email"}
+    )
+
+    # About You
+    about_why_design = TextAreaField(
+        "Why do you want to design a badge for Quest by Cycle?",
+        validators=[
+            DataRequired(message="This field is required."),
+            Length(max=500, message="Response cannot exceed 500 characters.")
+        ],
+        render_kw={"placeholder": "Tell us what excites you about this project."}
+    )
+    about_yourself = TextAreaField(
+        "Tell us a little about yourself and your interest in art!",
+        validators=[
+            DataRequired(message="This field is required."),
+            Length(max=500, message="Response cannot exceed 500 characters.")
+        ],
+        render_kw={"placeholder": "For example: How long have you been creating art? What inspires you?"}
+    )
+
+    # Badge Design Information
+    badge_id = SelectField(
+        "Badge Name",
+        coerce=int,
+        validators=[DataRequired(message="Please select a badge.")],
+    )
+    artwork_file = FileField(
+        "Upload Artwork",
+        validators=[
+            DataRequired(message="Please upload your artwork file."),
+            FileAllowed(["jpg", "jpeg", "png", "svg"], message="Only JPG, PNG, or SVG files are allowed."),
+            file_size_limit(8)  # Limit file size to 8 MB
+        ],
+    )
+
+    # Parent Consent
+    parent_consent = BooleanField(
+        "Parent/Guardian Consent",
+        validators=[DataRequired(message="Parent/Guardian consent is required.")],
+        default=False
+    )
+
+    submit = SubmitField("Submit")
+
 
 class PasswordForm(FlaskForm):
     password = PasswordField(

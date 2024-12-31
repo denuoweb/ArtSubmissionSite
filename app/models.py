@@ -38,6 +38,23 @@ class ArtistSubmission(db.Model):
         return f"<ArtistSubmission name={self.name}, email={self.email}>"
 
 
+class YouthArtistSubmission(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    age = db.Column(db.Integer, nullable=False)
+    parent_contact_info = db.Column(db.Text, nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    about_why_design = db.Column(db.Text, nullable=False)
+    about_yourself = db.Column(db.Text, nullable=False)
+    badge_id = db.Column(db.Integer, db.ForeignKey("badge.id"), nullable=False)
+    artwork_file = db.Column(db.String(255), nullable=False)
+
+    badge = db.relationship("Badge", backref="youth_submissions")
+
+    def __repr__(self):
+        return f"<YouthArtistSubmission name={self.name}, email={self.email}>"
+
+
 class BadgeArtwork(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     submission_id = db.Column(db.Integer, db.ForeignKey('artist_submission.id'), nullable=False)

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Call for Youth Artists</h1>
+
+<p>
+    Are you creative and love to draw? Do you care about the environment and want to make a difference? We’re looking for young artists (18 and under) to help design cool badges for Quest by Cycle, a game where people earn points for biking and helping the planet!
+</p>
+<h2>Prizes and Recognition</h2>
+<ul>
+    <li>Your design featured in the Quest by Cycle game!</li>
+    <li>A prize valued at ~$30 (e.g., bike accessories, etc).</li>
+</ul>
+<h2>Eligibility</h2>
+<p>
+    Anyone between 13 and 18 can apply. No experience is needed—just creativity and excitement!
+</p>
+
+<h2>What You’ll Do</h2>
+<ul>
+    <li>Create fun, colorful designs for badges that people will win in the game.</li>
+    <li>Make digital drawings or hand-drawn sketches that will be turned into digital badges.</li>
+</ul>
+
+<h2>How to Apply</h2>
+<p>
+    Fill out the form below with your information and artwork submission. Be sure to include all required fields so we can process your application.
+</p>
+
+<form method="post" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+
+    <div class="mb-3">
+        {{ form.name.label(class="form-label") }}
+        {{ form.name(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.age.label(class="form-label") }}
+        {{ form.age(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.parent_contact_info.label(class="form-label") }}
+        {{ form.parent_contact_info(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.email.label(class="form-label") }}
+        {{ form.email(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.about_why_design.label(class="form-label") }}
+        {{ form.about_why_design(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.about_yourself.label(class="form-label") }}
+        {{ form.about_yourself(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.badge_id.label(class="form-label") }}
+        {{ form.badge_id(class="form-select") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.artwork_file.label(class="form-label") }}
+        {{ form.artwork_file(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.parent_consent.label(class="form-check-label") }}
+        {{ form.parent_consent(class="form-check-input") }}
+    </div>
+
+    <div>
+        <button type="submit" class="btn btn-success mt-3">Submit Application</button>
+    </div>
+</form>
+
+<p>
+    If you have any questions, feel free to contact us at <strong>info@QuestByCycle.org</strong>. We can’t wait to see your amazing art!
+</p>
+{% endblock %}

@@ -247,6 +247,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 showError(field, errorContainer, `Please lengthen this text to at least ${field.minLength} characters.`);
             } else if (field.validity.tooLong) {
                 showError(field, errorContainer, `Please shorten this text to no more than ${field.maxLength} characters.`);
+            } else if (field.validity.rangeUnderflow || field.validity.rangeOverflow) {
+                showError(field, errorContainer, "Please provide a valid age.");
             } else {
                 showError(field, errorContainer, "Invalid input.");
             }
