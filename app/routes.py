@@ -91,8 +91,6 @@ def admin_page():
     # Re-fetch judges after any updates
     judges = Judge.query.all()
     return render_template("admin.html", judges=judges, submission_status=submission_status)
-
-
 @app.route("/call_to_artists", methods=["GET", "POST"])
 def call_to_artists():
     submission_open = is_submission_open()
@@ -112,21 +110,32 @@ def call_to_artists():
     # Initialize choices for each `badge_upload` in the `FieldList`
     for badge_upload in form.badge_uploads:
         badge_upload.badge_id.choices = badge_choices
-        
+
     if request.method == "POST":
+        # Retain previously selected badge IDs and uploaded artwork files
+        previous_badge_data = []
+        for badge_upload in form.badge_uploads.entries:
+            badge_id = badge_upload.badge_id.data
+            artwork_file = badge_upload.artwork_file.data
+            previous_badge_data.append({
+                "badge_id": badge_id,
+                "artwork_file": artwork_file.filename if artwork_file else None
+            })
+
         if not form.validate_on_submit():
             # Collect and flash specific validation errors
             for field_name, errors in form.errors.items():
                 for error in errors:
                     flash(f"{field_name}: {error}", "danger")
 
-            # Render the template again with error messages
+            # Render the template again with previous badge data
             return render_template(
                 "call_to_artists.html",
                 form=form,
                 badges=badges,
                 submission_status=submission_status,
-                submission_deadline=submission_deadline
+                submission_deadline=submission_deadline,
+                previous_badge_data=previous_badge_data  # Pass previous data to template
             )
         else:
             try:
@@ -212,6 +221,7 @@ def call_to_artists():
         submission_status=submission_status,
         submission_deadline=submission_deadline
     )
+
 
 @app.route("/youth-artists")
 def youth_artists():
