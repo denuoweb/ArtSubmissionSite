@@ -224,6 +224,7 @@ def call_to_artists():
         submission_deadline=submission_deadline
     )
 
+
 @app.route("/call_to_youth_artists", methods=["GET", "POST"])
 def call_to_youth_artists():
     submission_open = is_submission_open()
@@ -236,9 +237,9 @@ def call_to_youth_artists():
 
     form = YouthArtistSubmissionForm()
 
-    # Populate badge choices for the `badge_id` field
+    # Populate badge choices for the badge_id field
     badges = Badge.query.all()
-    badge_choices = [(badge.id, badge.name) for badge in badges]
+    badge_choices = [(None, "Select a badge")] + [(badge.id, badge.name) for badge in badges]  # Use None for blank placeholder
     form.badge_id.choices = badge_choices
 
     if request.method == "POST":
@@ -255,7 +256,7 @@ def call_to_youth_artists():
             )
         else:
             try:
-                # Save form data to the database
+                # Extract form data
                 name = form.name.data
                 age = form.age.data
                 parent_contact_info = form.parent_contact_info.data
@@ -265,12 +266,17 @@ def call_to_youth_artists():
                 badge_id = form.badge_id.data
                 artwork_file = form.artwork_file.data
 
-                # Validate badge
-                if not Badge.query.get(int(badge_id)):
+                # Validate badge selection
+                if badge_id is None:  # The placeholder is selected
+                    flash("Please select a valid badge.", "danger")
+                    return redirect(url_for("call_to_youth_artists"))
+
+                # Validate that the badge exists
+                if not Badge.query.get(badge_id):
                     flash("Invalid badge selection.", "danger")
                     return redirect(url_for("call_to_youth_artists"))
 
-                # Save file
+                # Save the uploaded artwork file
                 file_ext = os.path.splitext(artwork_file.filename)[1]
                 if not file_ext:
                     flash("Invalid file extension for uploaded file.", "danger")
@@ -280,7 +286,7 @@ def call_to_youth_artists():
                 artwork_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
                 artwork_file.save(artwork_path)
 
-                # Save submission
+                # Save submission to the database
                 submission = YouthArtistSubmission(
                     name=name,
                     age=age,
@@ -288,7 +294,7 @@ def call_to_youth_artists():
                     email=email,
                     about_why_design=about_why_design,
                     about_yourself=about_yourself,
-                    badge_id=int(badge_id),
+                    badge_id=badge_id,
                     artwork_file=unique_filename
                 )
                 db.session.add(submission)
@@ -309,6 +315,7 @@ def call_to_youth_artists():
         submission_status=submission_status,
         submission_deadline=submission_deadline
     )
+    
 
 @app.route("/submission-success")
 def submission_success():
