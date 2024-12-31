@@ -4,6 +4,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const badgeUploadContainer = document.getElementById("badgeUploadContainer");
     const form = document.getElementById("submissionForm");
 
+    const fileInputs = document.querySelectorAll("input[type='file'][data-existing]");
+    fileInputs.forEach(input => {
+        const existingFile = input.dataset.existing;
+        if (existingFile) {
+            const fileLabel = document.createElement("p");
+            fileLabel.className = "existing-file";
+            fileLabel.textContent = `Previously uploaded: ${existingFile}`;
+            input.parentNode.insertBefore(fileLabel, input);
+        }
+    });
+
     // Initialize Choices.js for existing badge_uploads
     const initializeExistingChoices = () => {
         const badgeSelects = badgeUploadContainer.querySelectorAll("select[name^='badge_uploads-'][name$='-badge_id']");
@@ -285,6 +296,21 @@ document.addEventListener("DOMContentLoaded", () => {
         // Prevent default submission to handle validation
         event.preventDefault();
 
+        const fileInputs = document.querySelectorAll("input[type='file'][data-existing]");
+        fileInputs.forEach(input => {
+            if (input.files.length === 0 && input.dataset.existing) {
+                // Create a hidden input to retain the existing file
+                const hiddenInput = document.createElement("input");
+                hiddenInput.type = "hidden";
+                hiddenInput.name = input.name; // Use the same name as the file input
+                hiddenInput.value = input.dataset.existing;
+                form.appendChild(hiddenInput);
+    
+                // Remove the empty file input to prevent overwriting
+                input.removeAttribute("name");
+            }
+        });
+        
         let formIsValid = true;
 
         // Validate all required fields

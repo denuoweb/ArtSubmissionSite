@@ -115,16 +115,23 @@
                             </option>
                         {% endfor %}
                     </select>
+                    <div class="invalid-feedback" id="badge_uploads-{{ loop.index0 }}-badge_id-error">Please select a badge.</div>
                 </div>
                 <div class="mb-3">
                     <label for="badge_uploads-{{ loop.index0 }}-artwork_file">Upload Artwork</label>
-                    <input type="file" class="form-control" id="badge_uploads-{{ loop.index0 }}-artwork_file" name="badge_uploads-{{ loop.index0 }}-artwork_file" accept=".jpg,.jpeg,.png,.svg" {% if badge_data.artwork_file %}data-existing="{{ badge_data.artwork_file }}"{% endif %}>
+                    <input 
+                        type="file" 
+                        class="form-control" 
+                        id="badge_uploads-{{ loop.index0 }}-artwork_file" 
+                        name="badge_uploads-{{ loop.index0 }}-artwork_file" 
+                        accept=".jpg,.jpeg,.png,.svg" 
+                        {% if badge_data.artwork_file %}data-existing="{{ badge_data.artwork_file }}"{% endif %}>
+                    <div class="invalid-feedback" id="badge_uploads-{{ loop.index0 }}-artwork_file-error">Please upload your artwork file.</div>
                 </div>
             </fieldset>
         {% endfor %}
     </div>
-
-
+    
     <button type="button" id="addBadgeUpload" class="btn btn-success mt-3">Add Badge Upload</button>
 
     <!-- Demographic Information -->

@@ -92,7 +92,6 @@ def admin_page():
     judges = Judge.query.all()
     return render_template("admin.html", judges=judges, submission_status=submission_status)
 
-
 @app.route("/call_to_artists", methods=["GET", "POST"])
 def call_to_artists():
     submission_open = is_submission_open()
@@ -113,15 +112,22 @@ def call_to_artists():
     for badge_upload in form.badge_uploads:
         badge_upload.badge_id.choices = badge_choices
 
+    previous_badge_data = []
+
     if request.method == "POST":
-        # Retain previously selected badge IDs and uploaded artwork files
-        previous_badge_data = []
         for badge_upload in form.badge_uploads.entries:
             badge_id = badge_upload.badge_id.data
             artwork_file = badge_upload.artwork_file.data
+
+            # Check if `artwork_file` is a FileStorage object or a string
+            if hasattr(artwork_file, "filename"):  # FileStorage object
+                filename = artwork_file.filename
+            else:  # String (previously uploaded file name)
+                filename = artwork_file
+
             previous_badge_data.append({
                 "badge_id": badge_id,
-                "artwork_file": artwork_file.filename if artwork_file else None
+                "artwork_file": filename
             })
 
         if not form.validate_on_submit():
@@ -177,7 +183,7 @@ def call_to_artists():
                     accessibility_needs=accessibility_needs,
                     future_engagement=future_engagement,
                     consent_to_data=consent_to_data,
-                    opt_in_featured_artwork=opt_in_featured_artwork,
+                    opt_in_featured_artwork=opt_in_featured_artwork
                 )
                 db.session.add(submission)
                 db.session.flush()  # Flush to get the submission ID
@@ -190,15 +196,20 @@ def call_to_artists():
                         db.session.rollback()
                         return redirect(url_for("call_to_artists"))
 
-                    file_ext = os.path.splitext(artwork_file.filename)[1]
-                    if not file_ext:
-                        flash(f"Invalid file extension for uploaded file.", "danger")
-                        db.session.rollback()
-                        return redirect(url_for("call_to_artists"))
+                    # If artwork_file is a string, it's an existing file; skip saving
+                    if hasattr(artwork_file, "filename"):  # FileStorage object
+                        file_ext = os.path.splitext(artwork_file.filename)[1]
+                        if not file_ext:
+                            flash(f"Invalid file extension for uploaded file.", "danger")
+                            db.session.rollback()
+                            return redirect(url_for("call_to_artists"))
 
-                    unique_filename = f"{uuid.uuid4()}{file_ext}"
-                    artwork_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
-                    artwork_file.save(artwork_path)
+                        unique_filename = f"{uuid.uuid4()}{file_ext}"
+                        artwork_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
+                        artwork_file.save(artwork_path)
+                    else:
+                        # Use the previously uploaded file
+                        unique_filename = artwork_file
 
                     badge_artwork = BadgeArtwork(
                         submission_id=submission.id,
@@ -221,7 +232,8 @@ def call_to_artists():
         form=form,
         badges=badges,
         submission_status=submission_status,
-        submission_deadline=submission_deadline
+        submission_deadline=submission_deadline,
+        previous_badge_data=previous_badge_data  # Pass previous data to template
     )
 
 

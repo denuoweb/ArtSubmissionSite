@@ -8,13 +8,18 @@ import re
 
 def file_size_limit(max_size_mb):
     def _file_size_limit(form, field):
-        if field.data:
+        # Check if the field contains a file (FileStorage object)
+        if field.data and hasattr(field.data, "read"):  # Only validate if it's a file object
             file_size = len(field.data.read())  # Get the file size in bytes
             field.data.seek(0)  # Reset file pointer after reading
             max_size_bytes = max_size_mb * 1024 * 1024  # Convert MB to bytes
             if file_size > max_size_bytes:
                 raise ValidationError(f"File size must not exceed {max_size_mb} MB.")
+        elif isinstance(field.data, str):
+            # If `field.data` is a string (previously uploaded file), skip validation
+            return
     return _file_size_limit
+    
 
 class BadgeUploadForm(Form):
     badge_id = SelectField(
