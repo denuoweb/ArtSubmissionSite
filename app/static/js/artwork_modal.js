@@ -69,6 +69,9 @@ function openArtworkModal(_, name, submissionId) {
   modal.style.display = 'block';
   modal.classList.add('show');
   document.body.classList.add('body-no-scroll'); // Prevent scrolling when modal is open
+
+  // Prevent background from scrolling
+  document.body.style.overflow = 'hidden';
 }
 
 function closeArtworkModal() {
@@ -78,6 +81,9 @@ function closeArtworkModal() {
   modal.style.display = 'none';
   modal.classList.remove('show');
   document.body.classList.remove('body-no-scroll'); // Restore scrolling
+
+  // Restore background scrolling
+  document.body.style.overflow = '';
 }
 
 

@@ -8,6 +8,9 @@ function openVideoModal() {
 
     // Play the video when the modal opens
     video.play();
+
+    // Prevent background from scrolling
+    document.body.style.overflow = 'hidden';
 }
 
 function closeVideoModal() {
@@ -21,4 +24,7 @@ function closeVideoModal() {
     // Hide the modal
     modal.style.display = 'none';
     modal.classList.remove('show');
+
+    // Restore background scrolling
+    document.body.style.overflow = '';
 }

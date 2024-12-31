@@ -23,6 +23,10 @@ function openBadgeModal() {
             modal.style.display = 'block';
             modal.classList.add('show');
             document.body.classList.add('body-no-scroll'); // Prevent scrolling
+
+            // Prevent background from scrolling
+            document.body.style.overflow = 'hidden';
+        
         })
         .catch(error => console.error('Error fetching badge data:', error));
 }
@@ -34,16 +38,25 @@ function closeBadgeModal() {
     modal.style.display = 'none';
     modal.classList.remove('show');
     document.body.classList.remove('body-no-scroll'); // Restore scrolling
+
+    // Restore background scrolling
+    document.body.style.overflow = '';
 }
 
 function openTermsModal() {
     const modal = document.getElementById('termsModal');
     modal.style.display = 'block';
     modal.classList.add('show');
+
+    // Prevent background from scrolling
+    document.body.style.overflow = 'hidden';
 }
 
 function closeTermsModal() {
     const modal = document.getElementById('termsModal');
     modal.style.display = 'none';
     modal.classList.remove('show');
+
+    // Restore background scrolling
+    document.body.style.overflow = '';
 }

@@ -13,7 +13,7 @@
     <li>Digital designs created as vector art (.SVG files) or high-resolution files (e.g., .PNG or .JPEG at 300 DPI or higher). If you prefer traditional media (e.g., paper or sculpture), you can submit a clear photo image of your work.</li>
     <li>Each badge should reflect the theme of the associated quest (e.g., cycling, sustainability, local culture).</li>
     <li>Bold, creative, and engaging designs that inspire players to ride bicycles.</li>
-    <li>Watch our informational video <a href="#" onclick="openVideoModal()">here</a> to see how the Quest by Cycle game rewards sustainable cycling and how you can be part of the badge design contest that brings these quests to life.</li>
+    <li>Watch our informational video <a href="#" onclick="openVideoModal(); return false;">here</a> to see how the Quest by Cycle game rewards sustainable cycling and how you can be part of the badge design contest that brings these quests to life.</li>
 </ul>
 
 <h2>Submission Requirements</h2>
@@ -22,7 +22,7 @@
         <strong>Artist Bio:</strong> A brief bio introducing yourself (1,000 to 2,500 characters).
     </li>
     <li>
-        <strong>Badge Design Concept:</strong> Select one or more of the badges currently in the game, and submit finalized designs for those badges. The list of badge names and descriptions can be found <a href="#" onclick="openBadgeModal()">here</a>.
+        <strong>Badge Design Concept:</strong> Select one or more of the badges currently in the game, and submit finalized designs for those badges. The list of badge names and descriptions can be found <a href="#" onclick="openBadgeModal(); return false;">here</a>.
     </li>
     <li>
         <strong>Statement of Interest:</strong> A short statement (1,000 to 2,500 characters) on why you’d like to contribute to this project and how your work reflects diversity, equity, and/or inclusion.
@@ -53,7 +53,7 @@
 <h2>Badge List</h2>
 <p id="badge-list">
     A complete list of the badges to choose from is available 
-    <a href="#" onclick="openBadgeModal()">here</a>. Each badge represents a specific quest, such as cycling to local landmarks, participating in community events, or promoting sustainability.
+    <a href="#" onclick="openBadgeModal(); return false;">here</a>. Each badge represents a specific quest, such as cycling to local landmarks, participating in community events, or promoting sustainability.
 </p>
 
 <h2>Submission Period</h2>
@@ -156,7 +156,7 @@
         {{ form.consent_to_data(class_="form-check-input", id=form.consent_to_data.id) }}
         <label class="form-check-label" for="{{ form.consent_to_data.id }}">{{ form.consent_to_data.label }}</label>
         <div class="invalid-feedback" id="consent_to_data-error"></div>
-        <a href="#" class="ms-2" onclick="openTermsModal()">Read Terms and Conditions</a>
+        <a href="#" class="ms-2" onclick="openTermsModal(); return false;">Read Terms and Conditions</a>
     </div>
 
     <!-- Featured Artwork (Voluntary Opt-In) -->
@@ -183,7 +183,7 @@
     <div class="modal-content">
         <div class="modal-header">
             <h5 class="modal-title">Terms and Conditions</h5>
-            <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeTermsModal()">×</button>
+            <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeTermsModal(); return false;">×</button>
         </div>
         <div class="modal-body">
             <p><strong>Privacy & Data Usage:</strong> Your personal information is collected exclusively for the purpose of administering the Quest by Cycle Badge Design Application. It will not be sold or shared with third parties, except as required by law or necessary for running this program.</p>
@@ -204,7 +204,7 @@
     <div class="modal-content">
         <div class="modal-header">
             <h5 class="modal-title" id="badgeModalTitle">Available Badges</h5>
-            <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeBadgeModal()">×</button>
+            <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeBadgeModal(); return false;">×</button>
         </div>
         <div class="modal-body">
             <table class="badge-table">
@@ -227,7 +227,7 @@
     <div class="modal-content">
         <div class="modal-header">
             <h5 class="modal-title" id="videoModalTitle">Informational Video</h5>
-            <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeVideoModal()">×</button>
+            <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeVideoModal(); return false;">×</button>
         </div>
         <div class="modal-body">
             <video id="informationalVideo" controls style="width: 100%; height: auto;">
