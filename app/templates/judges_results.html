@@ -14,20 +14,40 @@
             <th>Rank</th>
             <th>Artist Name</th>
             <th>Badge Name</th>
+            <th>Artwork</th>
             <th>Score (Lower is Better)</th>
+            <th>Judge Votes</th>
         </tr>
     </thead>
     <tbody>
-        {% for submission in results %}
+        {% for artwork in results %}
         <tr>
             <td>{{ loop.index }}</td> <!-- Automatically increments for each row -->
-            <td>{{ submission.name }}</td>
-            <td>{{ submission.badge_name }}</td>
-            <td>{{ submission.total_score }}</td>
+            <td>{{ artwork.artist_name }}</td>
+            <td>{{ artwork.badge_name }}</td>
+            <td>
+                <!-- Trigger the modal with the required data -->
+                <a href="#" 
+                   class="artwork-thumbnail" 
+                   data-artwork-url="{{ url_for('static', filename=artwork.artwork_file) }}" 
+                   data-name="{{ artwork.artist_name }}" 
+                   data-id="{{ artwork.badge_artwork_id }}" 
+                   onclick="return false;">View Artwork</a>
+            </td>
+            <td>{{ artwork.total_score }}</td>
+            <td>
+                <ul>
+                    {% for vote in judge_votes_by_artwork[artwork.badge_artwork_id] %}
+                    <li>{{ vote.judge_name }}: Rank {{ vote.rank }}</li>
+                    {% endfor %}
+                </ul>
+            </td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+
+
 {% else %}
 <p>No results are available yet. Judges need to submit their votes first.</p>
 {% endif %}
@@ -59,4 +79,37 @@
         </ul>
     </div>
 </div>
+
+<!-- Artwork Modal -->
+<div id="artworkModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="artworkModalTitle">Artwork Detail</h5>
+            <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeArtworkModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <ul class="list-group">
+                <li class="list-group-item"><strong>Submitter Name:</strong> <span id="modalSubmitterName"></span></li>
+                <li class="list-group-item"><strong>Email:</strong> <span id="modalEmail"></span></li>
+                <li class="list-group-item"><strong>Artist Bio:</strong> <span id="modalArtistBio"></span></li>
+                <li class="list-group-item"><strong>Portfolio Link:</strong> <a id="modalPortfolioLink" href="" target="_blank"></a></li>
+                <li class="list-group-item"><strong>Statement:</strong> <span id="modalStatement"></span></li>
+                <li class="list-group-item"><strong>Cultural Engagement:</strong> <span id="modalCulturalEngagement"></span></li>
+                <li class="list-group-item"><strong>Community Impact:</strong> <span id="modalCommunityImpact"></span></li>
+                <li class="list-group-item"><strong>Sustainability Importance:</strong> <span id="modalSustainability"></span></li>
+                <li class="list-group-item"><strong>Demographic Identity:</strong> <span id="modalDemographic"></span></li>
+                <li class="list-group-item"><strong>Lane County Connection:</strong> <span id="modalLaneCounty"></span></li>
+                <li class="list-group-item"><strong>Accessibility Needs:</strong> <span id="modalAccessibility"></span></li>
+                <li class="list-group-item"><strong>Future Engagement:</strong> <span id="modalFutureEngagement"></span></li>
+                <li class="list-group-item"><strong>Opt-In to Feature All Submitted Artwork?</strong><span id="modalFeaturedOptIn"></span>
+                </li>
+            </ul>
+            <ul id="modalBadgeArtworks" class="list-group mt-3"></ul>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/artwork_modal.js') }}"></script>
 {% endblock %}
