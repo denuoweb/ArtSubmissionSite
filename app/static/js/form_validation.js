@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const maxBadgeUploads = 3;  // Maximum number of badge uploads allowed
+    const maxBadgeUploads = 3;
     const addBadgeBtn = document.getElementById("addBadgeUpload");
     const badgeUploadContainer = document.getElementById("badgeUploadContainer");
     const form = document.getElementById("submissionForm");
@@ -15,7 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Initialize Choices.js for existing badge_uploads
     const initializeExistingChoices = () => {
         const badgeSelects = badgeUploadContainer.querySelectorAll("select[name^='badge_uploads-'][name$='-badge_id']");
         badgeSelects.forEach(select => {
@@ -31,33 +30,25 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
-    // Call on page load
     initializeExistingChoices();
     updateAddBadgeButton();
 
     let badgeIndexCounter = badgeUploadContainer.querySelectorAll('.badge-upload-unit').length;
     let availableIndices = [];
 
-    // Function to check and update the state of the Add Badge button
     function updateAddBadgeButton() {
         const currentUploads = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
-
-        // Disable the button if max uploads reached
         addBadgeBtn.disabled = currentUploads >= maxBadgeUploads;
 
-        // Hide the button if max uploads reached, otherwise show it
         if (currentUploads >= maxBadgeUploads) {
-            addBadgeBtn.style.display = "none"; // Hide the button
+            addBadgeBtn.style.display = "none";
         } else {
-            addBadgeBtn.style.display = "block"; // Show the button
+            addBadgeBtn.style.display = "block";
         }
     }
 
-    // Function to populate a dropdown with badge data
     function populateBadgeDropdown(selectElement, badgeData) {
-        selectElement.innerHTML = ""; // Clear existing options
-
-        // Add a default "Select a Badge" option
+        selectElement.innerHTML = "";
         const defaultOption = document.createElement("option");
         defaultOption.value = "";
         defaultOption.textContent = "Select a Badge";
@@ -65,7 +56,6 @@ document.addEventListener("DOMContentLoaded", () => {
         defaultOption.selected = true;
         selectElement.appendChild(defaultOption);
 
-        // Add options from badgeData
         badgeData.forEach((badge) => {
             const option = document.createElement("option");
             option.value = badge.id;
@@ -74,31 +64,22 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Function to attach validation listeners to a field
     function attachValidationListeners(field, choicesInstance = null) {
         if (field.tagName.toLowerCase() === "select" || field.type === "file") {
             field.addEventListener("change", () => {
-                validateField(field);
                 if (field.tagName.toLowerCase() === "select") {
                     updateBadgeOptions();
                 }
             });
-        } else {
-            field.addEventListener("input", () => {
-                validateField(field);
-            });
         }
 
-        // If using Choices.js, listen for Choices-specific events
         if (choicesInstance) {
             choicesInstance.passedElement.element.addEventListener("change", () => {
-                validateField(field);
                 updateBadgeOptions();
             });
         }
     }
 
-    // Event listener for adding a new badge upload unit
     addBadgeBtn.addEventListener("click", () => {
         const currentUploads = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
         if (currentUploads >= maxBadgeUploads) {
@@ -106,7 +87,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // Reuse an available index if any
         let newIndex;
         if (availableIndices.length > 0) {
             newIndex = availableIndices.pop();
@@ -115,48 +95,37 @@ document.addEventListener("DOMContentLoaded", () => {
             badgeIndexCounter++;
         }
 
-        // Create a new badge upload unit
         const newBadgeUpload = document.createElement("fieldset");
         newBadgeUpload.classList.add("badge-upload-unit", "border", "p-3", "mb-3");
 
-        // Generate unique IDs based on the new index
         const badgeIdName = `badge_uploads-${newIndex}-badge_id`;
         const artworkFileName = `badge_uploads-${newIndex}-artwork_file`;
         const badgeIdId = badgeIdName;
         const artworkFileId = artworkFileName;
 
-        // Badge selection HTML
         const badgeSelectHTML = `
             <div class="mb-3">
                 <label for="${badgeIdId}">Select a Badge</label>
-                <select class="form-select" id="${badgeIdId}" name="${badgeIdName}" required>
+                <select class="form-select" id="${badgeIdId}" name="${badgeIdName}">
                     <option value="" disabled selected>Select a Badge</option>
                 </select>
-                <div class="invalid-feedback" id="${badgeIdId}-error">Please select a badge.</div>
             </div>
         `;
 
-        // Artwork file upload HTML
         const artworkUploadHTML = `
             <div class="mb-3">
                 <label for="${artworkFileId}">Upload Artwork</label>
-                <input type="file" class="form-control" id="${artworkFileId}" name="${artworkFileName}" accept=".jpg,.jpeg,.png,.svg" required>
-                <div class="invalid-feedback" id="${artworkFileId}-error">Please upload your artwork file.</div>
+                <input type="file" class="form-control" id="${artworkFileId}" name="${artworkFileName}" accept=".jpg,.jpeg,.png,.svg">
             </div>
         `;
 
-        // Remove button HTML
         const removeButtonHTML = `
             <button type="button" class="btn btn-danger btn-sm removeBadgeUpload">Remove</button>
         `;
 
-        // Assemble the badge upload unit
         newBadgeUpload.innerHTML = `<legend>Badge Upload ${newIndex + 1}</legend>${badgeSelectHTML}${artworkUploadHTML}${removeButtonHTML}`;
-
-        // Append the new badge upload unit to the container
         badgeUploadContainer.appendChild(newBadgeUpload);
 
-        // Populate the badge dropdown with data
         const badgeSelect = document.getElementById(badgeIdId);
         fetch("/api/badges")
             .then((response) => response.json())
@@ -170,29 +139,23 @@ document.addEventListener("DOMContentLoaded", () => {
                     removeItemButton: true,
                 });
                 attachValidationListeners(badgeSelect, choicesInstance);
-                updateBadgeOptions(); // Update badge options after adding a new select
+                updateBadgeOptions();
             })
             .catch((error) => console.error("Error fetching badge data:", error));
 
-        // Attach validation listeners to the new file input
         const artworkInput = document.getElementById(artworkFileId);
-        if (artworkInput) {
-            attachValidationListeners(artworkInput);
-        }
 
-        // Add remove button functionality
         const removeButton = newBadgeUpload.querySelector(".removeBadgeUpload");
         removeButton.addEventListener("click", () => {
             badgeUploadContainer.removeChild(newBadgeUpload);
-            availableIndices.push(newIndex); // Add the index back to availableIndices
-            updateAddBadgeButton(); // Update the Add Badge button state
-            updateBadgeOptions(); // Update badge options to re-enable any disabled badges
+            availableIndices.push(newIndex);
+            updateAddBadgeButton();
+            updateBadgeOptions();
         });
 
-        updateAddBadgeButton(); // Update the Add Badge button state
+        updateAddBadgeButton();
     });
 
-    // Function to update badge options across all dropdowns to prevent duplicate selections
     function updateBadgeOptions() {
         const allSelects = badgeUploadContainer.querySelectorAll("select[name^='badge_uploads-'][name$='-badge_id']");
         const selectedValues = Array.from(allSelects)
@@ -202,7 +165,6 @@ document.addEventListener("DOMContentLoaded", () => {
         allSelects.forEach(select => {
             const choicesInstance = select._choices;
             if (choicesInstance) {
-                // Iterate through all options in Choices.js
                 choicesInstance.store.options.forEach(option => {
                     const choiceValue = option.value;
                     const isSelectedElsewhere = selectedValues.includes(choiceValue) && choiceValue !== select.value;
