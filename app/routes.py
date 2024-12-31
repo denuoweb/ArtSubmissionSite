@@ -16,6 +16,7 @@ def index():
     # Get submission status and deadlines
     submission_open = is_submission_open()
     submission_status = "Open" if submission_open else "Closed"
+    submission_start = SUBMISSION_START.strftime("%B %d, %Y at %I:%M %p %Z")
     submission_deadline = SUBMISSION_END.strftime("%B %d, %Y at %I:%M %p %Z")
 
     # Fetch all badges
@@ -24,6 +25,7 @@ def index():
     return render_template(
         "index.html",
         submission_status=submission_status,
+        submission_start=submission_start,
         submission_deadline=submission_deadline,
         badges=badges  # Pass badges to the template
     )
