@@ -24,13 +24,16 @@ document.addEventListener("DOMContentLoaded", () => {
     initializeExistingChoices();
     updateAddBadgeButton();
 
+    let badgeIndexCounter = badgeUploadContainer.querySelectorAll('.badge-upload-unit').length;
+    let availableIndices = [];
+
     // Function to check and update the state of the Add Badge button
     function updateAddBadgeButton() {
         const currentUploads = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
-    
+
         // Disable the button if max uploads reached
         addBadgeBtn.disabled = currentUploads >= maxBadgeUploads;
-    
+
         // Hide the button if max uploads reached, otherwise show it
         if (currentUploads >= maxBadgeUploads) {
             addBadgeBtn.style.display = "none"; // Hide the button
@@ -92,7 +95,14 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const newIndex = currentUploads;  // Zero-based index
+        // Reuse an available index if any
+        let newIndex;
+        if (availableIndices.length > 0) {
+            newIndex = availableIndices.pop();
+        } else {
+            newIndex = badgeIndexCounter;
+            badgeIndexCounter++;
+        }
 
         // Create a new badge upload unit
         const newBadgeUpload = document.createElement("fieldset");
@@ -101,8 +111,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Generate unique IDs based on the new index
         const badgeIdName = `badge_uploads-${newIndex}-badge_id`;
         const artworkFileName = `badge_uploads-${newIndex}-artwork_file`;
-        const badgeIdId = `${badgeIdName}`;
-        const artworkFileId = `${artworkFileName}`;
+        const badgeIdId = badgeIdName;
+        const artworkFileId = artworkFileName;
 
         // Badge selection HTML
         const badgeSelectHTML = `
@@ -163,6 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const removeButton = newBadgeUpload.querySelector(".removeBadgeUpload");
         removeButton.addEventListener("click", () => {
             badgeUploadContainer.removeChild(newBadgeUpload);
+            availableIndices.push(newIndex); // Add the index back to availableIndices
             updateAddBadgeButton(); // Update the Add Badge button state
             updateBadgeOptions(); // Update badge options to re-enable any disabled badges
         });
