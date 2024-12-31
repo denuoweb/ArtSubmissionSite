@@ -31,6 +31,9 @@ class ArtistSubmission(db.Model):
     # Relationship to BadgeArtwork
     badge_artworks = db.relationship('BadgeArtwork', backref='submission', cascade='all, delete-orphan')
 
+    # Relationship to JudgeVote
+    judge_votes = db.relationship('JudgeVote', backref='submission', cascade='all, delete-orphan')
+
     def __repr__(self):
         return f"<ArtistSubmission name={self.name}, email={self.email}>"
 
@@ -40,6 +43,9 @@ class BadgeArtwork(db.Model):
     submission_id = db.Column(db.Integer, db.ForeignKey('artist_submission.id'), nullable=False)
     badge_id = db.Column(db.Integer, db.ForeignKey('badge.id'), nullable=False)
     artwork_file = db.Column(db.String(255), nullable=False)
+
+    # Relationship to JudgeVote (for votes on a specific badge artwork)
+    judge_votes = db.relationship('JudgeVote', backref='badge_artwork', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f"<BadgeArtwork Badge={self.badge.name}, File={self.artwork_file}>"
@@ -68,7 +74,8 @@ class JudgeVote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     judge_id = db.Column(db.Integer, db.ForeignKey('judge.id'), nullable=False)
     submission_id = db.Column(db.Integer, db.ForeignKey('artist_submission.id'), nullable=False)
+    badge_artwork_id = db.Column(db.Integer, db.ForeignKey('badge_artwork.id'), nullable=False)
     rank = db.Column(db.Integer, nullable=False)
 
     def __repr__(self):
-        return f"<JudgeVote judge_id={self.judge_id}, submission_id={self.submission_id}, rank={self.rank}>"
+        return f"<JudgeVote judge_id={self.judge_id}, badge_artwork_id={self.badge_artwork_id}, rank={self.rank}>"
