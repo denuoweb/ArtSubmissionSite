@@ -1,268 +1,343 @@
-// Updated form_validation.js (Preserves all existing logic and fixes the issue)
+// form_handler.js
 
 document.addEventListener("DOMContentLoaded", () => {
+    const maxBadgeUploads = 3;  // Maximum number of badge uploads allowed
+    const addBadgeBtn = document.getElementById("addBadgeUpload");
     const badgeUploadContainer = document.getElementById("badgeUploadContainer");
-    const addBadgeUploadButton = document.getElementById("addBadgeUpload");
+    const form = document.getElementById("submissionForm");
 
-    if (!badgeUploadContainer || !addBadgeUploadButton) {
-        console.error("Badge upload container or 'Add Another Badge' button is missing.");
-        return;
+    // Initialize Choices.js for existing badge_uploads
+    const initializeExistingChoices = () => {
+        const badgeSelects = badgeUploadContainer.querySelectorAll("select[name^='badge_uploads-'][name$='-badge_id']");
+        badgeSelects.forEach(select => {
+            const choicesInstance = new Choices(select, {
+                searchEnabled: true,
+                itemSelectText: "Select",
+                placeholder: true,
+                placeholderValue: "Select a Badge",
+                shouldSort: true,
+                removeItemButton: true,
+            });
+            attachValidationListeners(select, choicesInstance);
+        });
+    };
+
+    // Call on page load
+    initializeExistingChoices();
+    updateAddBadgeButton();
+
+    // Function to check and update the state of the Add Badge button
+    function updateAddBadgeButton() {
+        const currentUploads = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
+    
+        // Disable the button if max uploads reached
+        addBadgeBtn.disabled = currentUploads >= maxBadgeUploads;
+    
+        // Hide the button if max uploads reached, otherwise show it
+        if (currentUploads >= maxBadgeUploads) {
+            addBadgeBtn.style.display = "none"; // Hide the button
+        } else {
+            addBadgeBtn.style.display = "block"; // Show the button
+        }
     }
 
-    // Add new badge upload functionality
-    addBadgeUploadButton.addEventListener("click", () => {
-        const badgeOptionsJSONElement = document.getElementById("badgeOptionsJSON");
+    // Function to populate a dropdown with badge data
+    function populateBadgeDropdown(selectElement, badgeData) {
+        selectElement.innerHTML = ""; // Clear existing options
 
-        if (!badgeOptionsJSONElement) {
-            console.error("Badge options JSON element not found.");
+        // Add a default "Select a Badge" option
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "Select a Badge";
+        defaultOption.disabled = true;
+        defaultOption.selected = true;
+        selectElement.appendChild(defaultOption);
+
+        // Add options from badgeData
+        badgeData.forEach((badge) => {
+            const option = document.createElement("option");
+            option.value = badge.id;
+            option.textContent = `${badge.name}: ${badge.description}`;
+            selectElement.appendChild(option);
+        });
+    }
+
+    // Function to attach validation listeners to a field
+    function attachValidationListeners(field, choicesInstance = null) {
+        if (field.tagName.toLowerCase() === "select" || field.type === "file") {
+            field.addEventListener("change", () => {
+                validateField(field);
+                if (field.tagName.toLowerCase() === "select") {
+                    updateBadgeOptions();
+                }
+            });
+        } else {
+            field.addEventListener("input", () => {
+                validateField(field);
+            });
+        }
+
+        // If using Choices.js, listen for Choices-specific events
+        if (choicesInstance) {
+            choicesInstance.passedElement.element.addEventListener("change", () => {
+                validateField(field);
+                updateBadgeOptions();
+            });
+        }
+    }
+
+    // Event listener for adding a new badge upload unit
+    addBadgeBtn.addEventListener("click", () => {
+        const currentUploads = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
+        if (currentUploads >= maxBadgeUploads) {
+            alert(`You can only upload artwork for up to ${maxBadgeUploads} badges.`);
             return;
         }
 
-        const badgeOptionsHTML = generateBadgeOptionsHTML(badgeOptionsJSONElement);
+        const newIndex = currentUploads;  // Zero-based index
 
-        if (!badgeOptionsHTML) {
-            console.error("Badge options HTML could not be generated.");
-            return;
-        }
-
+        // Create a new badge upload unit
         const newBadgeUpload = document.createElement("fieldset");
         newBadgeUpload.classList.add("badge-upload-unit", "border", "p-3", "mb-3");
-        newBadgeUpload.innerHTML = `
-            <legend>Badge Upload</legend>
+
+        // Generate unique IDs based on the new index
+        const badgeIdName = `badge_uploads-${newIndex}-badge_id`;
+        const artworkFileName = `badge_uploads-${newIndex}-artwork_file`;
+        const badgeIdId = `${badgeIdName}`;
+        const artworkFileId = `${artworkFileName}`;
+
+        // Badge selection HTML
+        const badgeSelectHTML = `
             <div class="mb-3">
-                <label for="badge_id_new">Select a Badge</label>
-                <select class="form-select" id="badge_id_new" name="badge_id_new" required>
-                    <option value="" disabled selected>Select a badge</option>
-                    ${badgeOptionsHTML}
+                <label for="${badgeIdId}">Select a Badge</label>
+                <select class="form-select" id="${badgeIdId}" name="${badgeIdName}" required>
+                    <option value="" disabled selected>Select a Badge</option>
                 </select>
-                <div class="invalid-feedback">Please select a badge.</div>
+                <div class="invalid-feedback" id="${badgeIdId}-error">Please select a badge.</div>
             </div>
+        `;
+
+        // Artwork file upload HTML
+        const artworkUploadHTML = `
             <div class="mb-3">
-                <label for="artwork_file_new">Upload Artwork</label>
-                <input type="file" class="form-control" id="artwork_file_new" name="artwork_file_new" accept="image/*" required>
-                <div class="invalid-feedback">Please upload your artwork file.</div>
+                <label for="${artworkFileId}">Upload Artwork</label>
+                <input type="file" class="form-control" id="${artworkFileId}" name="${artworkFileName}" accept=".jpg,.jpeg,.png,.svg" required>
+                <div class="invalid-feedback" id="${artworkFileId}-error">Please upload your artwork file.</div>
             </div>
+        `;
+
+        // Remove button HTML
+        const removeButtonHTML = `
             <button type="button" class="btn btn-danger btn-sm removeBadgeUpload">Remove</button>
         `;
 
+        // Assemble the badge upload unit
+        newBadgeUpload.innerHTML = `<legend>Badge Upload ${newIndex + 1}</legend>${badgeSelectHTML}${artworkUploadHTML}${removeButtonHTML}`;
+
+        // Append the new badge upload unit to the container
         badgeUploadContainer.appendChild(newBadgeUpload);
 
-        // Add remove functionality to the new badge upload
+        // Populate the badge dropdown with data
+        const badgeSelect = document.getElementById(badgeIdId);
+        fetch("/api/badges")
+            .then((response) => response.json())
+            .then((badgeData) => {
+                populateBadgeDropdown(badgeSelect, badgeData);
+                const choicesInstance = new Choices(badgeSelect, {
+                    searchEnabled: true,
+                    itemSelectText: "",
+                    placeholder: true,
+                    shouldSort: false,
+                    removeItemButton: true,
+                });
+                attachValidationListeners(badgeSelect, choicesInstance);
+                updateBadgeOptions(); // Update badge options after adding a new select
+            })
+            .catch((error) => console.error("Error fetching badge data:", error));
+
+        // Attach validation listeners to the new file input
+        const artworkInput = document.getElementById(artworkFileId);
+        if (artworkInput) {
+            attachValidationListeners(artworkInput);
+        }
+
+        // Add remove button functionality
         const removeButton = newBadgeUpload.querySelector(".removeBadgeUpload");
         removeButton.addEventListener("click", () => {
-            newBadgeUpload.remove();
+            badgeUploadContainer.removeChild(newBadgeUpload);
+            updateAddBadgeButton(); // Update the Add Badge button state
+            updateBadgeOptions(); // Update badge options to re-enable any disabled badges
         });
 
-        // Add validation to the new file input
-        const newFileInput = newBadgeUpload.querySelector("input[type='file']");
-        if (newFileInput) {
-            addFileSizeValidation(newFileInput);
-        }
+        updateAddBadgeButton(); // Update the Add Badge button state
     });
 
-    // Handle remove button clicks
-    badgeUploadContainer.addEventListener("click", (event) => {
-        if (event.target.classList.contains("removeBadgeUpload")) {
-            event.target.closest(".badge-upload-unit").remove();
-        }
-    });
+    // Function to update badge options across all dropdowns to prevent duplicate selections
+    function updateBadgeOptions() {
+        const allSelects = badgeUploadContainer.querySelectorAll("select[name^='badge_uploads-'][name$='-badge_id']");
+        const selectedValues = Array.from(allSelects)
+            .map(select => select.value)
+            .filter(value => value !== "");
 
-    // Add validation to all existing file inputs
-    const existingFileInputs = document.querySelectorAll("input[type='file']");
-    existingFileInputs.forEach((fileInput) => {
-        addFileSizeValidation(fileInput);
-    });
-
-    // Form validation logic
-    const form = document.getElementById("submissionForm");
-    const submitButton = form?.querySelector('button[type="submit"]');
-
-    if (!form || !submitButton) {
-        console.error("Form or submit button not found!");
-        return;
-    }
-
-    submitButton.disabled = true;
-
-    form.addEventListener("input", () => {
-        submitButton.disabled = !form.checkValidity();
-    });
-
-    form.addEventListener("input", (event) => {
-        const field = event.target;
-        validateField(field);
-    });
-
-    form.addEventListener("submit", (event) => {
-        event.preventDefault();
-
-        const requiredFields = form.querySelectorAll("[required]");
-        let allValid = true;
-
-        requiredFields.forEach((field) => {
-            if (!field.checkValidity()) {
-                validateField(field);
-                allValid = false;
-            }
-        });
-
-        if (allValid) {
-            console.log("All required fields are valid. Submitting form...");
-            form.submit();
-        }
-    });
-
-    // Email field real-time validation
-    const emailField = document.getElementById("email");
-    const emailErrorContainer = document.getElementById("email-error");
-
-    let emailTimeout;
-
-    emailField?.addEventListener("input", () => {
-        clearTimeout(emailTimeout);
-
-        emailTimeout = setTimeout(() => {
-            const email = emailField.value.trim();
-            if (!email) {
-                showError(emailField, emailErrorContainer, "Email is required.");
-                return;
-            }
-
-            clearError(emailField, emailErrorContainer);
-            if (!isValidEmail(email)) {
-                showError(emailField, emailErrorContainer, "Invalid email format.");
-                return;
-            }
-
-            validateEmail(email);
-        }, 500);
-    });
-
-    // Helper function to generate badge options HTML
-    function generateBadgeOptionsHTML(badgeOptionsJSONElement) {
-        try {
-            const badgeData = JSON.parse(badgeOptionsJSONElement.textContent || "[]");
-
-            if (!Array.isArray(badgeData) || badgeData.length === 0) {
-                return null;
-            }
-
-            return badgeData
-                .map(badge => `<option value="${badge.id}">${badge.name}: ${badge.description}</option>`)
-                .join("");
-        } catch (error) {
-            console.error("Error parsing badge options JSON:", error);
-            return null;
-        }
-    }
-
-    // Helper function to validate file size
-    function addFileSizeValidation(fileInput) {
-        fileInput.addEventListener("change", () => {
-            const files = fileInput.files;
-            const maxFileSize = 8 * 1024 * 1024; // 8 MB in bytes
-
-            if (files.length > 0) {
-                const file = files[0];
-
-                if (file.size > maxFileSize) {
-                    const errorContainer = fileInput.nextElementSibling;
-                    showError(
-                        fileInput,
-                        errorContainer,
-                        `File size must not exceed 8 MB. Current size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`
-                    );
-                    fileInput.value = ""; // Clear the file input to prevent invalid submission
-                } else {
-                    clearError(fileInput, fileInput.nextElementSibling);
-                }
+        allSelects.forEach(select => {
+            const choicesInstance = select._choices;
+            if (choicesInstance) {
+                // Iterate through all options in Choices.js
+                choicesInstance.store.options.forEach(option => {
+                    const choiceValue = option.value;
+                    const isSelectedElsewhere = selectedValues.includes(choiceValue) && choiceValue !== select.value;
+                    if (isSelectedElsewhere) {
+                        choicesInstance.disable(choiceValue, true);
+                    } else {
+                        choicesInstance.disable(choiceValue, false);
+                    }
+                });
             }
         });
     }
 
-    // Helper: Validate single field
+    // --- Validation Logic ---
+
+    // Function to validate a single field
     function validateField(field) {
-        const fieldName = field.name || field.id;
-        let errorContainer = document.getElementById(`${fieldName}-error`);
+        const fieldId = field.id;
+        const errorContainer = document.getElementById(`${fieldId}-error`);
 
         if (!errorContainer) {
-            errorContainer = createErrorContainer(field);
+            console.warn(`Error container for "${fieldId}" not found.`);
+            return;
         }
 
-        if (field.validity.valueMissing) {
-            showError(field, errorContainer, `${fieldName} is required.`);
-        } else if (field.validity.tooShort) {
-            showError(field, errorContainer, `Too short: ${fieldName} requires at least ${field.minLength} characters.`);
-        } else if (field.validity.tooLong) {
-            showError(field, errorContainer, `Too long: ${fieldName} allows a maximum of ${field.maxLength} characters.`);
-        } else if (field.validity.typeMismatch) {
-            showError(field, errorContainer, `Invalid value for ${fieldName}.`);
-        } else if (field.validity.patternMismatch) {
-            showError(field, errorContainer, `Invalid format for ${fieldName}.`);
+        // Special handling for file inputs
+        if (field.type === "file") {
+            if (field.files.length === 0 || !field.files[0]) {
+                showError(field, errorContainer, "Please upload your artwork file.");
+            } else {
+                // Validate file type
+                const file = field.files[0];
+                const allowedExtensions = [".jpg", ".jpeg", ".png", ".svg"];
+                const fileExt = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+
+                if (!allowedExtensions.includes(fileExt)) {
+                    showError(field, errorContainer, "Only JPG, JPEG, PNG, or SVG files are allowed.");
+                    return;
+                }
+
+                // Optionally, validate file size here
+                // Example: Max 8MB
+                const maxSizeMB = 8;
+                if (file.size > maxSizeMB * 1024 * 1024) {
+                    showError(field, errorContainer, `File size must be less than ${maxSizeMB} MB.`);
+                    return;
+                }
+                field.classList.add("is-valid");
+                // If all validations pass
+                clearError(field, errorContainer);
+            }
+            return;
+        }
+
+        // Check if the field is valid
+        if (!field.checkValidity()) {
+            if (field.validity.valueMissing) {
+                showError(field, errorContainer, "This field is required.");
+            } else if (field.validity.typeMismatch) {
+                showError(field, errorContainer, "Please enter a valid value.");
+            } else if (field.validity.tooShort) {
+                showError(field, errorContainer, `Please lengthen this text to at least ${field.minLength} characters.`);
+            } else if (field.validity.tooLong) {
+                showError(field, errorContainer, `Please shorten this text to no more than ${field.maxLength} characters.`);
+            } else {
+                showError(field, errorContainer, "Invalid input.");
+            }
         } else {
             clearError(field, errorContainer);
         }
     }
 
-    // Helper: Check if email format is valid
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    // Helper: Show error message
+    // Show error message
     function showError(field, errorContainer, message) {
         field.classList.add("is-invalid");
-        if (errorContainer) {
-            errorContainer.textContent = message;
-            errorContainer.style.display = "block";
-        }
+        errorContainer.textContent = message;
+        errorContainer.style.display = "block";
     }
 
-    // Helper: Clear error message
+    // Clear error message
     function clearError(field, errorContainer) {
         field.classList.remove("is-invalid");
-        if (errorContainer) {
-            errorContainer.textContent = "";
-            errorContainer.style.display = "none";
-        }
+        errorContainer.textContent = "";
+        errorContainer.style.display = "none";
     }
 
-    // Helper: Email validation logic
-    function validateEmail(email) {
-        fetch("/validate_email", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: email })
-        })
-        .then((response) => response.json())
-        .then((data) => {
-            if (data.error) {
-                showError(emailField, emailErrorContainer, data.error);
-            } else {
-                clearError(emailField, emailErrorContainer);
-                emailErrorContainer.textContent = "Email is accepted.";
-                emailErrorContainer.style.display = "block";
-                emailErrorContainer.classList.add("text-success");
+    // Form submission handling
+    form.addEventListener("submit", (event) => {
+        // Prevent default submission to handle validation
+        event.preventDefault();
+
+        let formIsValid = true;
+
+        // Validate all required fields
+        const requiredFields = form.querySelectorAll("[required]");
+        requiredFields.forEach((field) => {
+            validateField(field);
+            if (!field.checkValidity()) {
+                formIsValid = false;
             }
-        })
-        .catch((error) => {
-            console.error("Error validating email:", error);
-            showError(emailField, emailErrorContainer, "An error occurred while validating the email.");
         });
-    }
 
-    function createErrorContainer(field) {
-        const errorContainer = document.createElement("div");
-        errorContainer.className = "invalid-feedback";
-        errorContainer.id = `${field.name || field.id}-error`;
-
-        if (field.parentNode) {
-            field.parentNode.appendChild(errorContainer);
-        } else {
-            console.warn(`Parent node for field "${field.name || field.id}" not found.`);
+        // Additional validation for unique badge selections
+        if (!validateUniqueBadges()) {
+            formIsValid = false;
         }
 
-        return errorContainer;
+        if (formIsValid) {
+            // Optionally, you can disable the submit button to prevent multiple submissions
+            const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+            }
+
+            // Submit the form
+            form.submit();
+        } else {
+            // Optionally, focus the first invalid field
+            const firstInvalid = form.querySelector(".is-invalid");
+            if (firstInvalid) {
+                firstInvalid.focus();
+            }
+        }
+    });
+
+    // Function to validate unique badge selections
+    function validateUniqueBadges() {
+        const allSelects = badgeUploadContainer.querySelectorAll("select[name^='badge_uploads-'][name$='-badge_id']");
+        const selectedValues = Array.from(allSelects)
+            .map(select => select.value)
+            .filter(value => value !== "");
+
+        const duplicates = selectedValues.filter((item, index) => selectedValues.indexOf(item) !== index);
+
+        if (duplicates.length > 0) {
+            // Find all select elements with duplicate values and show errors
+            allSelects.forEach(select => {
+                if (duplicates.includes(select.value)) {
+                    const errorContainer = document.getElementById(`${select.id}-error`);
+                    if (errorContainer) {
+                        showError(select, errorContainer, "This badge has already been selected.");
+                    }
+                }
+            });
+            return false;
+        }
+
+        // Clear duplicate errors if any
+        allSelects.forEach(select => {
+            const errorContainer = document.getElementById(`${select.id}-error`);
+            if (errorContainer && errorContainer.textContent === "This badge has already been selected.") {
+                clearError(select, errorContainer);
+            }
+        });
+
+        return true;
     }
 });

@@ -1,9 +1,9 @@
+
 from flask_wtf import FlaskForm
-from wtforms import HiddenField, BooleanField, PasswordField, StringField, TextAreaField, FileField, SubmitField, SelectField
+from wtforms import Form, FormField, HiddenField, FieldList, BooleanField, PasswordField, StringField, TextAreaField, FileField, SubmitField, SelectField
 from wtforms.validators import Regexp, DataRequired, Email, URL, Optional, Length, ValidationError
 from flask_wtf.file import FileAllowed
 from urllib.parse import urlparse
-
 import re
 
 def file_size_limit(max_size_mb):
@@ -16,23 +16,26 @@ def file_size_limit(max_size_mb):
                 raise ValidationError(f"File size must not exceed {max_size_mb} MB.")
     return _file_size_limit
 
+class BadgeUploadForm(Form):
+    badge_id = SelectField(
+        "Select a Badge",
+        coerce=int,
+        validators=[DataRequired(message="Please select a badge.")],
+    )
+    artwork_file = FileField(
+        "Upload Artwork",
+        validators=[
+            DataRequired(message="Please upload your artwork file."),
+            FileAllowed(
+                ["jpg", "jpeg", "png", "svg"],
+                message="Only JPG, JPEG, PNG, or SVG files are allowed."
+            ),
+            file_size_limit(8)  # Limit file size to 8 MB
+        ],
+    )
 
 class ArtistSubmissionForm(FlaskForm):
-    def validate_phone_number(form, field):
-        if field.data:
-            # Allow digits, hyphens, spaces, and parentheses
-            phone_regex = re.compile(r'^[0-9\s\-()]+$')
-            if not phone_regex.match(field.data):
-                raise ValidationError("Phone number must contain only digits, spaces, hyphens, or parentheses.")
-
-
-    def validate_portfolio_link(self, field):
-        if field.data:
-            parsed = urlparse(field.data)
-            # Automatically prepend 'http://' if the protocol is missing
-            if not parsed.scheme:
-                field.data = f"https://{field.data}"
-
+    # Personal Information
     name = StringField(
         "Name", 
         validators=[
@@ -54,7 +57,7 @@ class ArtistSubmissionForm(FlaskForm):
         validators=[
             Optional(),
             Length(max=15, message="Phone number cannot exceed 15 digits."),
-            validate_phone_number
+            Regexp(r'^[0-9\s\-()]+$', message="Phone number must contain only digits, spaces, hyphens, or parentheses.")
         ],
         render_kw={"placeholder": "Enter your phone number"}
     )
@@ -83,23 +86,18 @@ class ArtistSubmissionForm(FlaskForm):
         ],
         render_kw={"placeholder": "Why do you want to contribute? How does your work reflect diversity?"}
     )
-    badge_id = SelectField(
-        "Select a Badge",
-        coerce=int,
-        validators=[DataRequired(message="Please select a badge.")],
-    )
-    artwork_file = FileField(
-        "Upload Artwork", 
+    
+    # Badge Uploads
+    badge_uploads = FieldList(
+        FormField(BadgeUploadForm),
+        min_entries=1,
+        max_entries=3,
         validators=[
-            DataRequired(message="Please upload your artwork file."),
-            FileAllowed(
-                ["jpg", "jpeg", "png", "svg"], 
-                message="Only JPG, JPEG, PNG, or SVG files are allowed."
-            ),
-            file_size_limit(8)  # Limit file size to 8 MB
-        ],
-        render_kw={"multiple": True}
+            DataRequired(message="Please provide at least one badge and artwork.")
+        ]
     )
+    
+    # Demographic Information
     demographic_identity = StringField(
         "How do you identify?",
         validators=[
@@ -132,6 +130,8 @@ class ArtistSubmissionForm(FlaskForm):
         ],
         render_kw={"placeholder": "Describe your interest in future involvement."}
     )
+    
+    # Consent and Opt-In
     consent_to_data = BooleanField(
         "Do you consent to the Terms and Conditions?",
         validators=[DataRequired(message="Please provide your consent.")],
@@ -141,8 +141,9 @@ class ArtistSubmissionForm(FlaskForm):
         "Feature All Submitted Artwork (Voluntary Opt-In)",
         default=False
     )
+    
+    # Submit Button
     submit = SubmitField("Submit")
-
 
 class PasswordForm(FlaskForm):
     password = PasswordField(

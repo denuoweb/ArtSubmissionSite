@@ -71,10 +71,11 @@
     Submissions are currently <strong>{{ submission_status }}</strong>.<br>
     The deadline for submissions is <strong>{{ submission_deadline }}</strong>.
 </p>
+
+
 <form method="POST" enctype="multipart/form-data" id="submissionForm">
     {{ form.hidden_tag() }}
-    <h2>Submit Your Application</h2>
-
+    
     <!-- Personal Information Section -->
     <div class="mb-3">
         <label for="{{ form.name.id }}">{{ form.name.label }}</label>
@@ -111,36 +112,25 @@
 
     <!-- Badge Design Information -->
     <div id="badgeUploadContainer">
-        {% for badge_file in badge_files %}
+        {% for badge_upload in form.badge_uploads %}
         <fieldset class="badge-upload-unit border p-3 mb-3">
-            <legend>Badge Upload</legend>
+            <legend>Badge Upload {{ loop.index }}</legend>
             <div class="mb-3">
-                <label for="badge_id_{{ loop.index }}">Select a Badge</label>
-                <select class="form-select" id="badge_id_{{ loop.index }}" name="badge_id" required>
-                    <option value="" disabled>Select a badge</option>
-                    {% for badge in badges %}
-                    <option value="{{ badge.id }}" {% if badge.id == badge_file.badge_id|int %}selected{% endif %}>
-                        {{ badge.name }}: {{ badge.description }}
-                    </option>
-                    {% endfor %}
-                </select>
-                <div class="invalid-feedback">Please select a badge.</div>
+                <label for="{{ badge_upload.form.badge_id.id }}">{{ badge_upload.form.badge_id.label }}</label>
+                {{ badge_upload.form.badge_id(class_="form-select", id=badge_upload.form.badge_id.id) }}
+                <div class="invalid-feedback" id="{{ badge_upload.form.badge_id.id }}-error">Please select a badge.</div>
             </div>
             <div class="mb-3">
-                <label for="artwork_file_{{ loop.index }}">Upload Artwork</label>
-                <input type="file" class="form-control" id="artwork_file_{{ loop.index }}" name="artwork_file" required>
-                {% if badge_file.artwork_file %}
-                <p class="text-muted">Previously uploaded: {{ badge_file.artwork_file }}</p>
-                {% endif %}
-                <div class="invalid-feedback">Please upload your artwork file.</div>
+                <label for="{{ badge_upload.form.artwork_file.id }}">{{ badge_upload.form.artwork_file.label }}</label>
+                {{ badge_upload.form.artwork_file(class_="form-control", id=badge_upload.form.artwork_file.id) }}
             </div>
             <button type="button" class="btn btn-danger btn-sm removeBadgeUpload">Remove</button>
         </fieldset>
         {% endfor %}
     </div>
-    
-    <button type="button" id="addBadgeUpload" class="btn btn-primary btn-sm">Add Another Badge</button>
-    
+
+    <button type="button" id="addBadgeUpload" class="btn btn-primary">Add Badge Upload</button>
+
     <!-- Demographic Information -->
     <div class="mb-3">
         <label for="{{ form.demographic_identity.id }}">{{ form.demographic_identity.label }}</label>
@@ -166,19 +156,19 @@
     </div>
 
     <!-- Acknowledgment and Consent -->
-    <div class="mb-3">
-        <label for="{{ form.consent_to_data.id }}">{{ form.consent_to_data.label }}</label>
+    <div class="mb-3 form-check">
         {{ form.consent_to_data(class_="form-check-input", id=form.consent_to_data.id) }}
+        <label class="form-check-label" for="{{ form.consent_to_data.id }}">{{ form.consent_to_data.label }}</label>
         <div class="invalid-feedback" id="consent_to_data-error"></div>
         <a href="#" class="ms-2" onclick="openTermsModal()">Read Terms and Conditions</a>
     </div>
 
     <!-- Featured Artwork (Voluntary Opt-In) -->
-    <div class="mb-3">
-        <label for="{{ form.opt_in_featured_artwork.id }}">
+    <div class="mb-3 form-check">
+        {{ form.opt_in_featured_artwork(class_="form-check-input", id=form.opt_in_featured_artwork.id) }}
+        <label class="form-check-label" for="{{ form.opt_in_featured_artwork.id }}">
             {{ form.opt_in_featured_artwork.label }}
         </label>
-        {{ form.opt_in_featured_artwork(class_="form-check-input", id=form.opt_in_featured_artwork.id) }}
         <div class="invalid-feedback" id="opt_in_featured_artwork-error"></div>
         <p class="form-text">
             By checking this box, you allow Quest by Cycle to feature your submitted artwork in the
@@ -186,6 +176,7 @@
             award. We deeply appreciate your contribution, as it enriches the game with community creativity and input. This is entirely voluntary, and no additional compensation is provided.
         </p>
     </div>
+
     <!-- Submit Button -->
     <button type="submit" class="btn btn-success mt-3">Submit Application</button>
 </form>
@@ -256,7 +247,6 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/form_validation.js') }}"></script>
 <script src="{{ url_for('static', filename='js/badge_modal.js') }}"></script>
-<script src="{{ url_for('static', filename='js/badge_submission.js') }}"></script>
 <script src="{{ url_for('static', filename='js/video_modal.js') }}"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
