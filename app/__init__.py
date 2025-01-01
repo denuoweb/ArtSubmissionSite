@@ -9,7 +9,7 @@ import toml
 config = toml.load("config.toml")
 
 # Initialize app
-app = Flask(__name__, static_folder="static")
+app = Flask(__name__, static_folder="static", static_url_path="/static")
 app.config["SQLALCHEMY_DATABASE_URI"] = config["flask"]["SQLALCHEMY_DATABASE_URI"]
 app.config["SECRET_KEY"] = config["flask"]["SECRET_KEY"]
 app.config["UPLOAD_FOLDER"] = config["submissions"]["UPLOAD_FOLDER"]
