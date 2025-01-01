@@ -6,7 +6,7 @@ function openBadgeModal() {
     modalBody.innerHTML = '';
 
     // Fetch the badge data (use a server-side endpoint to provide the data)
-    fetch('/api/badges')
+    fetch('api/badges')
         .then(response => response.json())
         .then(data => {
             // Populate the modal with badge data

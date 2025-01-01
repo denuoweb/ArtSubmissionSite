@@ -16,7 +16,7 @@ function openArtworkModal(_, name, submissionId) {
   }
 
   // Fetch artwork details from the API
-  fetch(`/api/artwork-detail/${submissionId}`)
+  fetch(`api/artwork-detail/${submissionId}`)
       .then(response => {
           if (!response.ok) {
               throw new Error('Artwork details could not be loaded.');

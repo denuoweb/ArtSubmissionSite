@@ -1,5 +1,5 @@
 from flask import jsonify, render_template, request, redirect, url_for, flash, jsonify, session, abort
-from app import app, db
+from app import app, db, custom_url_for as url_for
 from app.models import ArtistSubmission, YouthArtistSubmission, Judge, JudgeVote, Badge, BadgeArtwork, SubmissionPeriod
 from app.forms import ArtistSubmissionForm, PasswordForm, RankingForm, YouthArtistSubmissionForm, SubmissionDatesForm
 from werkzeug.security import generate_password_hash, check_password_hash
