@@ -13,7 +13,7 @@ app = Flask(__name__, static_folder="static", static_url_path="/static")
 app.config["SQLALCHEMY_DATABASE_URI"] = config["flask"]["SQLALCHEMY_DATABASE_URI"]
 app.config["SECRET_KEY"] = config["flask"]["SECRET_KEY"]
 app.config["UPLOAD_FOLDER"] = config["submissions"]["UPLOAD_FOLDER"]
-app.config["APPLICATION_ROOT"] = "/badge_contest"
+app.config["APPLICATION_ROOT"] = config["flask"]["APPLICATION_ROOT"]
 
 # Create Folders
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)

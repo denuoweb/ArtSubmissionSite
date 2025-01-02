@@ -6,7 +6,7 @@ function deleteSubmission(submissionId) {
 
     const csrfToken = document.querySelector('input[name="csrf_token"]').value; // CSRF token
 
-    fetch(`judges/ballot/delete/${submissionId}`, {
+    fetch(`${basePath}/judges/ballot/delete/${submissionId}`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",

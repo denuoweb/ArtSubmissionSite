@@ -15,8 +15,10 @@ function openArtworkModal(_, name, submissionId) {
       return;
   }
 
+  const basePath = document.querySelector('body').getAttribute('data-base-path') || "";
+
   // Fetch artwork details from the API
-  fetch(`api/artwork-detail/${submissionId}`)
+  fetch(`${basePath}/api/artwork-detail/${submissionId}`)
       .then(response => {
           if (!response.ok) {
               throw new Error('Artwork details could not be loaded.');

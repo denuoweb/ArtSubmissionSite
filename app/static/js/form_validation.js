@@ -127,7 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
         badgeUploadContainer.appendChild(newBadgeUpload);
 
         const badgeSelect = document.getElementById(badgeIdId);
-        fetch("api/badges")
+        fetch(`${basePath}/api/badges`)
             .then((response) => response.json())
             .then((badgeData) => {
                 populateBadgeDropdown(badgeSelect, badgeData);

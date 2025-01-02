@@ -1,6 +1,7 @@
 [flask]
 SQLALCHEMY_DATABASE_URI = "postgresql://username:password@localhost/databasename8"
 SECRET_KEY = "your-secret-key"
+APPLICATION_ROOT = ""
 
 [submissions]
 UPLOAD_FOLDER = "app/static/submissions"

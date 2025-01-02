@@ -5,8 +5,10 @@ function openBadgeModal() {
     // Clear existing rows
     modalBody.innerHTML = '';
 
+    const basePath = document.querySelector('body').getAttribute('data-base-path') || "";
+
     // Fetch the badge data (use a server-side endpoint to provide the data)
-    fetch('api/badges')
+    fetch(`${basePath}/api/badges`)
         .then(response => response.json())
         .then(data => {
             // Populate the modal with badge data
