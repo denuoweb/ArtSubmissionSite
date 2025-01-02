@@ -14,6 +14,9 @@ app.config["SQLALCHEMY_DATABASE_URI"] = config["flask"]["SQLALCHEMY_DATABASE_URI
 app.config["SECRET_KEY"] = config["flask"]["SECRET_KEY"]
 app.config["UPLOAD_FOLDER"] = config["submissions"]["UPLOAD_FOLDER"]
 app.config["APPLICATION_ROOT"] = config["flask"]["APPLICATION_ROOT"]
+app.config['SESSION_COOKIE_SECURE'] = config["flask"]["SESSION_COOKIE_SECURE"]
+app.config['SESSION_COOKIE_HTTPONLY'] = config["flask"]["SESSION_COOKIE_HTTPONLY"]
+app.config['SESSION_COOKIE_SAMESITE'] = config["flask"]["SESSION_COOKIE_SAMESITE"]
 
 # Create Folders
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)

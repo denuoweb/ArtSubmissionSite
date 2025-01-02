@@ -5,6 +5,9 @@ APPLICATION_ROOT = ""
 DEBUG = true
 HOST = "0.0.0.0"
 PORT = 5000
+SESSION_COOKIE_SECURE = false
+SESSION_COOKIE_HTTPONLY = true
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 [submissions]
 UPLOAD_FOLDER = "app/static/submissions"
