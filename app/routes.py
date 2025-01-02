@@ -1,4 +1,5 @@
 from flask import jsonify, render_template, request, redirect, url_for, flash, jsonify, session, abort
+from flask_login import login_user, logout_user, login_required, current_user
 from app import app, db, custom_url_for as url_for
 from app.models import ArtistSubmission, YouthArtistSubmission, Judge, JudgeVote, Badge, BadgeArtwork, SubmissionPeriod
 from app.forms import ArtistSubmissionForm, PasswordForm, RankingForm, YouthArtistSubmissionForm, SubmissionDatesForm
@@ -8,6 +9,7 @@ from sqlalchemy.orm import joinedload
 from io import TextIOWrapper
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
+from urllib.parse import urlparse
 
 import os
 import uuid
@@ -23,6 +25,13 @@ def is_submission_open():
         return submission_period.submission_start <= now <= submission_period.submission_end
     return False
 
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash("Logged out successfully.", "success")
+    return redirect(url_for("index"))
 
 
 @app.route("/")
@@ -54,15 +63,15 @@ def index():
 
 
 @app.route("/admin", methods=["GET", "POST"])
+@login_required
 def admin_page():
-    if not session.get("is_judge") or not session.get("is_admin"):
-        flash("Unauthorized access. Admin privileges required.", "danger")
+    # Ensure the current user is loaded
+    if not current_user.is_authenticated:
+        flash("You must log in to access this page.", "danger")
         return redirect(url_for("judges_password"))
 
-    # Fetch the latest submission period
+    # Load submission period
     submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
-
-    # Pre-fill the form with existing dates if available
     dates_form = SubmissionDatesForm(
         submission_start=submission_period.submission_start if submission_period else None,
         submission_end=submission_period.submission_end if submission_period else None,
@@ -101,53 +110,17 @@ def admin_page():
     # Check the current submission status
     submission_open = is_submission_open()
     submission_status = "Open" if submission_open else "Closed"
-
-    # Fetch all judges for display
     judges = Judge.query.all()
 
-    if request.method == "POST":
-        # Adding a new judge
-        action = request.form.get("action")
-        if action == "add":
-            name = request.form.get("name")
-            password = request.form.get("password")
-            is_admin = request.form.get("is_admin") == "on"  # Checkbox for admin status
-
-            # Check if the judge name is unique
-            existing_judge = Judge.query.filter_by(name=name).first()
-            if existing_judge:
-                flash(f"Judge '{name}' already exists!", "danger")
-            else:
-                # Add new judge
-                new_judge = Judge(name=name, is_admin=is_admin)
-                new_judge.set_password(password)  # Hash the password and store it
-                db.session.add(new_judge)
-                db.session.commit()
-                flash(f"Judge '{name}' added successfully!", "success")
-        
-        # Removing a judge
-        elif action == "remove":
-            judge_id = request.form.get("judge_id")
-            judge_to_remove = Judge.query.get(judge_id)
-            if judge_to_remove:
-                if judge_to_remove.is_admin:
-                    flash("You cannot remove the admin.", "danger")
-                else:
-                    db.session.delete(judge_to_remove)
-                    db.session.commit()
-                    flash(f"Judge '{judge_to_remove.name}' removed successfully!", "success")
-            else:
-                flash("Judge not found!", "danger")
-
-    # Re-fetch judges after any updates
-    judges = Judge.query.all()
-
-    return render_template("admin.html",
+    app.logger.debug("Rendering admin page.")
+    return render_template(
+        "admin.html",
         judges=judges,
         submission_status=submission_status,
         submission_start=submission_period.submission_start if submission_period else None,
         submission_end=submission_period.submission_end if submission_period else None,
-        dates_form=dates_form)
+        dates_form=dates_form
+    )
 
 
 @app.route("/call_to_artists", methods=["GET", "POST"])
@@ -398,25 +371,11 @@ def call_to_youth_artists():
 def submission_success():
     return render_template("submission_success.html")
 
-@app.route("/carousel-images", methods=["GET"])
-def carousel_images():
-    # Get all files in the `static/submissions` folder
-    submissions_folder = app.config["UPLOAD_FOLDER"]
-    try:
-        images = os.listdir(submissions_folder)
-        # Generate URLs for the images (relative to "static/")
-        image_urls = [f"static/submissions/{image}" for image in images]
-        return jsonify(image_urls)
-    except Exception as e:
-        print(f"Error fetching images: {e}")
-        return jsonify([])  # Return an empty list if there's an error
 
-
-@app.route("/judges", methods=["GET"])
+@app.route("/judges", methods=["GET", "POST"])
 def judges_password():
     form = PasswordForm()
 
-    # Check if an admin exists
     admin_exists = Judge.query.filter_by(is_admin=True).first()
     if not admin_exists:
         flash("No admin exists. The first password entered will create the admin.", "info")
@@ -427,62 +386,45 @@ def judges_password():
 @app.route("/judges/validate", methods=["POST"])
 def validate_judge_password():
     form = PasswordForm()
+    app.logger.debug("Entered /judges/validate route")
+    
     if form.validate_on_submit():
+        app.logger.debug("Form validation successful")
         password = form.password.data
+        app.logger.debug(f"Received password: {password}")
 
-        # Check if an admin already exists in the database
-        admin_exists = Judge.query.filter_by(is_admin=True).first()
+        for judge in Judge.query.all():
+            app.logger.debug(f"Checking password for judge: {judge.name}")
+            if judge.check_password(password):
+                app.logger.debug(f"Password matched for judge: {judge.name}")
+                login_user(judge, remember=True)  # Ensure the session persists
+                app.logger.debug(f"Judge {judge.name} logged in successfully")
 
-        # If no admin exists, create the first admin dynamically
-        if not admin_exists:
-            # Create the first admin with hashed password
-            new_admin = Judge(name="admin", is_admin=True)
-            new_admin.set_password(password)  # Hash and store the password
-            db.session.add(new_admin)
-            db.session.commit()
+                next_page = request.args.get('next')
+                app.logger.debug(f"Received next parameter: {next_page}")
+                next_page = next_page if next_page else (
+                    url_for("admin_page") if judge.is_admin else url_for("judges_ballot")
+                )
+                return redirect(next_page)
 
-            # Set session variables for the newly created admin
-            session["is_judge"] = True
-            session["judge_id"] = new_admin.id
-            session["is_admin"] = True
-
-            flash(f"'{new_admin.name}' has been created as the first admin.", "success")
-            return redirect(url_for("admin_page"))
-
-        # Check if the password matches any existing judge
-        judge = Judge.query.all()
-        for existing_judge in judge:
-            if check_password_hash(existing_judge.password_hash, password):
-                # Valid judge login
-                session["is_judge"] = True
-                session["judge_id"] = existing_judge.id
-                session["is_admin"] = existing_judge.is_admin
-
-                if existing_judge.is_admin:
-                    # Redirect to admin page if the judge is an admin
-                    return redirect(url_for("admin_page"))
-                else:
-                    # Redirect to judge ballot otherwise
-                    return redirect(url_for("judges_ballot"))
-
-        # If no matching judge is found, reject the login attempt
+        app.logger.warning("Password did not match any judge")
         flash("Invalid password. Please try again.", "danger")
-        return redirect(url_for("judges_password"))
-
-    flash("Form validation failed. Please try again.", "danger")
+    else:
+        app.logger.warning("Form validation failed")
+        flash("Form validation failed. Please try again.", "danger")
+    
     return redirect(url_for("judges_password"))
 
 
 @app.route("/judges/ballot", methods=["GET", "POST"])
+@login_required
 def judges_ballot():
-    if not session.get("is_judge"):
+    if not current_user.is_authenticated:
         flash("Unauthorized access. Please log in.", "danger")
         return redirect(url_for("judges_password"))
 
-    judge_id = session.get("judge_id")
-    if not isinstance(judge_id, int):
-        flash("Invalid session data. Please log in again.", "danger")
-        return redirect(url_for("judges_password"))
+    # Retrieve the current judge's ID
+    judge_id = current_user.id
 
     # Fetch all artist submissions
     artist_submissions = db.session.query(
@@ -628,7 +570,11 @@ def judges_ballot():
 
 
 @app.route("/judges/results", methods=["GET"])
+@login_required
 def judges_results():
+    if not current_user.is_admin:
+        flash("Unauthorized access. Admin privileges required.", "danger")
+        return redirect(url_for("index"))
     from sqlalchemy import func
 
     # Aggregate scores for each artwork (BadgeArtwork) - General Submissions
@@ -740,9 +686,11 @@ def judges_submission_success():
 
 
 @app.route("/judges/ballot/delete/<int:submission_id>", methods=["POST"])
+@login_required
 def delete_submission(submission_id):
-    if not session.get("is_judge") or not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized access. Admin privileges required."}), 403
+    if not current_user.is_admin:
+        flash("Unauthorized access. Admin privileges required.", "danger")
+        return redirect(url_for("index"))
 
     # Fetch the submission to delete
     submission = ArtistSubmission.query.get_or_404(submission_id)
@@ -786,10 +734,11 @@ def api_badges():
 
 
 @app.route("/admin/badges", methods=["GET", "POST"])
+@login_required
 def manage_badges():
-    if not session.get("is_judge") or not session.get("is_admin"):
+    if not current_user.is_admin:
         flash("Unauthorized access. Admin privileges required.", "danger")
-        return redirect(url_for("judges_password"))
+        return redirect(url_for("index"))
 
     if request.method == "POST":
         action = request.form.get("action")
@@ -901,42 +850,37 @@ def validate_email():
 
 
 @app.route("/manage_judges", methods=["GET", "POST"])
+@login_required
 def manage_judges():
-    if not session.get("is_judge") or not session.get("is_admin"):
+    if not current_user.is_admin:
         flash("Unauthorized access. Admin privileges required.", "danger")
-        return redirect(url_for("judges_password"))
+        return redirect(url_for("index"))
 
-    # Fetch all judges for display
     judges = Judge.query.all()
 
     if request.method == "POST":
         action = request.form.get("action")
 
-        # Adding a new judge
         if action == "add":
             name = request.form.get("name")
             password = request.form.get("password")
-            is_admin = request.form.get("is_admin") == "on"  # Checkbox for admin status
+            is_admin = request.form.get("is_admin") == "on"
 
-            # Check if the judge name is unique
-            existing_judge = Judge.query.filter_by(name=name).first()
-            if existing_judge:
+            if Judge.query.filter_by(name=name).first():
                 flash(f"Judge '{name}' already exists!", "danger")
             else:
-                # Add new judge
                 new_judge = Judge(name=name, is_admin=is_admin)
-                new_judge.set_password(password)  # Hash the password and store it
+                new_judge.set_password(password)
                 db.session.add(new_judge)
                 db.session.commit()
                 flash(f"Judge '{name}' added successfully!", "success")
 
-        # Removing a judge
         elif action == "remove":
             judge_id = request.form.get("judge_id")
             judge_to_remove = Judge.query.get(judge_id)
             if judge_to_remove:
                 if judge_to_remove.is_admin:
-                    flash("You cannot remove the admin.", "danger")
+                    flash("Cannot remove the admin.", "danger")
                 else:
                     db.session.delete(judge_to_remove)
                     db.session.commit()
@@ -944,12 +888,12 @@ def manage_judges():
             else:
                 flash("Judge not found!", "danger")
 
-    # Re-fetch judges after any updates
     judges = Judge.query.all()
     return render_template("manage_judges.html", judges=judges)
 
 
 @app.route("/api/artwork-detail/<int:item_id>", methods=["GET"])
+@login_required
 def api_artwork_detail(item_id):
     # Attempt to fetch as BadgeArtwork first
     badge_artwork = BadgeArtwork.query.options(joinedload(BadgeArtwork.submission)).filter_by(id=item_id).first()
@@ -1006,10 +950,11 @@ def api_artwork_detail(item_id):
 
 
 @app.route("/admin/clear_votes", methods=["POST"])
+@login_required
 def clear_votes():
-    if not session.get("is_judge") or not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized access. Admin privileges required."}), 403
-
+    if not current_user.is_admin:
+        flash("Unauthorized access. Admin privileges required.", "danger")
+        return redirect(url_for("index"))
     try:
         # Delete all votes from the JudgeVote table
         db.session.query(JudgeVote).delete()

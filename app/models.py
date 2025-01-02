@@ -1,5 +1,8 @@
-from app import db
+from app import app, db
+from app.utils import custom_url_for as url_for
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
+
 
 class Badge(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -68,7 +71,7 @@ class BadgeArtwork(db.Model):
         return f"<BadgeArtwork Badge={self.badge.name}, File={self.artwork_file}>"
 
 
-class Judge(db.Model):
+class Judge(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -90,12 +93,16 @@ class Judge(db.Model):
 class JudgeVote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     judge_id = db.Column(db.Integer, db.ForeignKey('judge.id'), nullable=False)
-    submission_id = db.Column(db.Integer, db.ForeignKey('artist_submission.id'), nullable=False)
+    submission_id = db.Column(db.Integer, db.ForeignKey('artist_submission.id'), nullable=True)
+    youth_submission_id = db.Column(db.Integer, db.ForeignKey('youth_artist_submission.id'), nullable=True)
     badge_artwork_id = db.Column(db.Integer, db.ForeignKey('badge_artwork.id'), nullable=False)
     rank = db.Column(db.Integer, nullable=False)
 
     def __repr__(self):
-        return f"<JudgeVote judge_id={self.judge_id}, badge_artwork_id={self.badge_artwork_id}, rank={self.rank}>"
+        if self.submission_id:
+            return f"<JudgeVote submission_id={self.submission_id}>"
+        return f"<JudgeVote youth_submission_id={self.youth_submission_id}>"
+
 
 
 class SubmissionPeriod(db.Model):

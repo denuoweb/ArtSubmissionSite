@@ -1,7 +1,7 @@
-from flask import Flask, url_for as flask_url_for
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-
+from flask_login import LoginManager, user_logged_in, user_logged_out, user_loaded_from_request, current_user
 import os
 import toml
 
@@ -18,6 +18,7 @@ app.config['SESSION_COOKIE_SECURE'] = config["flask"]["SESSION_COOKIE_SECURE"]
 app.config['SESSION_COOKIE_HTTPONLY'] = config["flask"]["SESSION_COOKIE_HTTPONLY"]
 app.config['SESSION_COOKIE_SAMESITE'] = config["flask"]["SESSION_COOKIE_SAMESITE"]
 
+
 # Create Folders
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
@@ -25,21 +26,34 @@ os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-def custom_url_for(endpoint, **values):
-    """Custom url_for that prepends APPLICATION_ROOT."""
-    application_root = app.config.get("APPLICATION_ROOT", "")
-    original_url = flask_url_for(endpoint, **values)
+# Login Manager
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "judges_password"
+login_manager.login_message = "Please log in to access this page."
+login_manager.login_message_category = "warning"
 
-    # Only prepend APPLICATION_ROOT if it's not already in the URL
-    if not original_url.startswith(application_root):
-        return f"{application_root}{original_url}"
+@login_manager.user_loader
+def load_user(user_id):
+    from app.models import Judge
+    try:
+        user = Judge.query.get(int(user_id))
+        if user:
+            app.logger.debug(f"Loaded user: {user.name}, is_admin: {user.is_admin}")
+        else:
+            app.logger.warning(f"User with ID {user_id} not found.")
+        return user
+    except ValueError:
+        app.logger.error(f"Invalid user ID: {user_id}")
+    except Exception as e:
+        app.logger.error(f"Error in load_user: {e}")
+    return None
 
-    return original_url
+# Import custom_url_for from utils
+from app.utils import custom_url_for
 
-# Assign the custom_url_for to Jinja's global context
+# Assign custom_url_for to Jinja global context
 app.jinja_env.globals['url_for'] = custom_url_for
 
-# Make custom_url_for available for import
-app.custom_url_for = custom_url_for
-
+# Import routes and models AFTER db is initialized
 from app import routes, models
