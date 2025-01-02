@@ -19,7 +19,8 @@
 <h2>What You’ll Do</h2>
 <ul>
     <li>Create fun, colorful designs for badges that people will win in the game.</li>
-    <li>Make digital drawings or hand-drawn sketches that will be turned into digital badges.</li>
+    <li>Make digital drawings or hand-drawn art that will be turned into digital badges.</li>
+    <li>Choose from the list of badges <a href="#" onclick="openBadgeModal(); return false;">here</a>.</li>
 </ul>
 
 <h2>How to Apply</h2>
@@ -95,7 +96,56 @@
 
 </form>
 
+<!-- Badge Modal -->
+<div id="badgeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="badgeModalTitle">Available Badges</h5>
+            <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeBadgeModal(); return false;">×</button>
+        </div>
+        <div class="modal-body">
+            <table class="badge-table">
+                <thead>
+                    <tr>
+                        <th class="badge-name">Badge Name</th>
+                        <th class="badge-description">Description</th>
+                    </tr>
+                </thead>
+                <tbody id="badgeModalTableBody">
+                    <!-- Badge rows will be injected dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Terms and Conditions Modal -->
+<div id="termsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">Terms and Conditions</h5>
+            <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeTermsModal(); return false;">×</button>
+        </div>
+        <div class="modal-body">
+            <p><strong>Privacy & Data Usage:</strong> Your personal information is collected exclusively for the purpose of administering the Quest by Cycle Badge Design Application. It will not be sold or shared with third parties, except as required by law or necessary for running this program.</p>
+            <p><strong>Intellectual Property:</strong> You, the submitting artist, retain full ownership of your artwork. By accepting a $200 award for a winning submission, you grant Quest by Cycle a non-exclusive, worldwide license to use, reproduce, display, and distribute that winning artwork for promotional and program-related purposes, including but not limited to our website, social media, and grant reporting. If you choose to opt in (via the checkbox on the application) to allow Quest by Cycle to feature non-winning artwork, you similarly grant a non-exclusive, worldwide license for us to use, reproduce, display, and distribute that specific non-winning, unselected submission. If you do not opt in, your unselected artwork will not be used for any purpose. Unselected artwork that is opted in does not receive additional monetary compensation, but will receive attribution.</p>
+            <p><strong>Awards & Eligibility:</strong> Ten artists will be selected to each receive a single $200 award for their winning badge designs. If multiple designs by the same artist are selected, that artist will still receive only one $200 prize. This call is open to all artists in Lane County, with a separate category for youth aged 13–18. By submitting, you confirm that you meet these eligibility requirements and that you created the artwork or have full authorization to submit it.</p>
+            <p><strong>Publicity Release:</strong> By receiving a $200 award as a selected winner, you agree that your name and winning artwork may be used in promotional materials for Quest by Cycle without additional compensation. Non-winning artwork will only be used in promotional materials if you have explicitly opted in on the application.</p>
+            <p><strong>Liability:</strong> Quest by Cycle is not responsible for lost, delayed, or misdirected submissions due to technical issues. By participating, you agree to indemnify and hold harmless Quest by Cycle for any dispute arising from third-party claims related to your submission.</p>
+            <p><strong>Right to Modify or Cancel:</strong> Quest by Cycle reserves the right to modify, suspend, or terminate this call for artists if unforeseen circumstances arise. Any changes will be communicated on our official website or via the contact information you have provided.</p>
+            <p><strong>Grassroots & Community Focus:</strong> Quest by Cycle is a grassroots initiative supported by philanthropic grants and public contributions. We strive to recognize the creativity of all participants while using our limited resources responsibly. Offering both paid awards and a voluntary “featured” option for non-winning artwork allows us to remain inclusive, highlight diverse talents, and remain transparent about our funding constraints.</p>
+            <p><strong>Contact & Support:</strong> For any questions regarding your submission, these Terms & Conditions, or to provide feedback, please contact us at <a href="mailto:info@QuestByCycle.org">info@QuestByCycle.org</a>. We welcome inquiries and are committed to ensuring that all artists feel respected and appreciated.</p>
+
+        </div>
+    </div>
+</div>
+
+
 <p>
     If you have any questions, feel free to contact us at <strong>info@QuestByCycle.org</strong>. We can’t wait to see your amazing art!
 </p>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/badge_modal.js') }}"></script>
 {% endblock %}
