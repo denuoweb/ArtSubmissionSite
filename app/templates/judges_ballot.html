@@ -1,9 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
+
 <h1>Ballot</h1>
-{% if session.get('is_admin') %}
-<a href="{{ url_for('admin_page') }}" class="btn btn-secondary">Back to Admin Dashboard</a>
-{% endif %}
+
+<a href="{{ url_for('main.admin_page') }}" class="btn btn-secondary">Back to Admin Dashboard</a>
+
+<!-- Logout Button Section -->
+<h2>Logout</h2>
+<form method="POST" action="{{ url_for('main.judges_ballot') }}">
+    {{ logout_form.hidden_tag() }}
+    <button type="submit" class="btn btn-danger">Logout</button>
+</form>
 
 
 <!-- Tabs Navigation -->

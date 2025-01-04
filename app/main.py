@@ -1,8 +1,8 @@
-from flask import jsonify, render_template, request, redirect, url_for, flash, jsonify, session, abort
+from flask import Blueprint, jsonify, render_template, request, redirect, url_for, flash, session, abort
 from flask_login import login_user, logout_user, login_required, current_user
-from app import app, db, custom_url_for as url_for
-from app.models import ArtistSubmission, YouthArtistSubmission, Judge, JudgeVote, Badge, BadgeArtwork, SubmissionPeriod
-from app.forms import ArtistSubmissionForm, PasswordForm, RankingForm, YouthArtistSubmissionForm, SubmissionDatesForm
+from flask_wtf.csrf import generate_csrf
+from app.models import ArtistSubmission, YouthArtistSubmission, Judge, JudgeVote, Badge, BadgeArtwork, SubmissionPeriod, db
+from app.forms import ArtistSubmissionForm, LoginForm, LogoutForm, RankingForm, YouthArtistSubmissionForm, SubmissionDatesForm
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import joinedload
@@ -15,34 +15,39 @@ import os
 import uuid
 import csv
 
+main_bp = Blueprint('main', __name__)
+
 
 def is_submission_open():
     """Returns True if the current time is within the submission period."""
-    now = datetime.now(timezone.utc)  # Current time in UTC
+    now = datetime.now(timezone.utc)
     submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
     if submission_period:
-        # Submission times are already stored in UTC, so no need for timezone assignment
         return submission_period.submission_start <= now <= submission_period.submission_end
     return False
 
 
-@app.route("/logout")
+@main_bp.route('/csrf-token', methods=['GET'])
+def csrf_token():
+    token = generate_csrf()
+    return jsonify({'csrf_token': token})
+
+
+@main_bp.route('/logout', methods=["POST"])
 @login_required
 def logout():
     logout_user()
-    flash("Logged out successfully.", "success")
-    return redirect(url_for("index"))
+    flash('Logged out successfully.', 'success')
+    return redirect(url_for('main.index'))
 
 
-@app.route("/")
+@main_bp.route("/")
 def index():
-    # Get submission status and deadlines
+    print(f"index() Current user: {current_user}")
     submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
     submission_open = is_submission_open()
     submission_status = "Open" if submission_open else "Closed"
-    
     if submission_period:
-        # Convert submission times to Pacific Time for display
         pacific = ZoneInfo("US/Pacific")
         submission_start = submission_period.submission_start.astimezone(pacific).strftime("%B %d, %Y at %I:%M %p %Z")
         submission_deadline = submission_period.submission_end.astimezone(pacific).strftime("%B %d, %Y at %I:%M %p %Z")
@@ -50,7 +55,6 @@ def index():
         submission_start = "N/A"
         submission_deadline = "N/A"
 
-    # Fetch all badges
     badges = Badge.query.all()
 
     return render_template(
@@ -58,42 +62,46 @@ def index():
         submission_status=submission_status,
         submission_start=submission_start,
         submission_deadline=submission_deadline,
-        badges=badges  # Pass badges to the template
+        badges=badges
     )
 
 
-@app.route("/admin", methods=["GET", "POST"])
+@main_bp.route("/admin", methods=["GET", "POST"])
 @login_required
 def admin_page():
-    # Ensure the current user is loaded
-    if not current_user.is_authenticated:
-        flash("You must log in to access this page.", "danger")
-        return redirect(url_for("judges_password"))
+    print(f"admin() Current user: {current_user}")
 
-    # Load submission period
+    if not current_user.is_admin:
+        flash("Unauthorized access. Admin privileges required.", "danger")
+        return redirect(url_for("main.index"))
+
+    # Initialize the logout form
+    logout_form = LogoutForm()
+
+    if logout_form.validate_on_submit():
+        logout_user()
+        session.clear()  # Clear session data to ensure user is fully logged out
+        flash("You have been logged out.", "info")
+        return redirect(url_for("main.judges_password"))
+
     submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
     dates_form = SubmissionDatesForm(
         submission_start=submission_period.submission_start if submission_period else None,
         submission_end=submission_period.submission_end if submission_period else None,
     )
-    
     if dates_form.validate_on_submit():
         try:
-            # Assign the local timezone (Pacific Time) to form data
             pacific = ZoneInfo("US/Pacific")
             submission_start = dates_form.submission_start.data.replace(tzinfo=pacific)
             submission_end = dates_form.submission_end.data.replace(tzinfo=pacific)
 
-            # Convert the local time to UTC for storage
             submission_start_utc = submission_start.astimezone(timezone.utc)
             submission_end_utc = submission_end.astimezone(timezone.utc)
 
             if submission_period:
-                # Update the existing submission period
                 submission_period.submission_start = submission_start_utc
                 submission_period.submission_end = submission_end_utc
             else:
-                # Create a new submission period
                 new_period = SubmissionPeriod(
                     submission_start=submission_start_utc,
                     submission_end=submission_end_utc,
@@ -105,25 +113,22 @@ def admin_page():
         except Exception as e:
             db.session.rollback()
             flash("An error occurred while updating submission dates. Please try again.", "danger")
-            app.logger.error(f"Error updating submission dates: {e}")
 
-    # Check the current submission status
     submission_open = is_submission_open()
     submission_status = "Open" if submission_open else "Closed"
     judges = Judge.query.all()
 
-    app.logger.debug("Rendering admin page.")
     return render_template(
         "admin.html",
         judges=judges,
         submission_status=submission_status,
         submission_start=submission_period.submission_start if submission_period else None,
         submission_end=submission_period.submission_end if submission_period else None,
-        dates_form=dates_form
+        dates_form=dates_form,
+        logout_form=logout_form
     )
 
-
-@app.route("/call_to_artists", methods=["GET", "POST"])
+@main_bp.route("/call_to_artists", methods=["GET", "POST"])
 def call_to_artists():
     submission_open = is_submission_open()
     submission_status = "Open" if submission_open else "Closed"
@@ -132,11 +137,9 @@ def call_to_artists():
 
     form = ArtistSubmissionForm()
 
-    # Populate badge choices for the `badge_id` field inside each `badge_upload` in the `FieldList`
     badges = Badge.query.all()
     badge_choices = [(badge.id, f"{badge.name}: {badge.description}") for badge in badges]
 
-    # Initialize choices for each `badge_upload` in the `FieldList`
     for badge_upload in form.badge_uploads:
         badge_upload.badge_id.choices = badge_choices
 
@@ -145,16 +148,15 @@ def call_to_artists():
     if request.method == "POST":
         if not submission_open:
             flash("Submissions are currently closed. You cannot submit at this time.", "danger")
-            return redirect(url_for("call_to_artists"))
+            return redirect(url_for("main.call_to_artists"))
 
         for badge_upload in form.badge_uploads.entries:
             badge_id = badge_upload.badge_id.data
             artwork_file = badge_upload.artwork_file.data
 
-            # Check if `artwork_file` is a FileStorage object or a string
-            if hasattr(artwork_file, "filename"):  # FileStorage object
+            if hasattr(artwork_file, "filename"):
                 filename = artwork_file.filename
-            else:  # String (previously uploaded file name)
+            else:
                 filename = artwork_file
 
             previous_badge_data.append({
@@ -163,12 +165,10 @@ def call_to_artists():
             })
 
         if not form.validate_on_submit():
-            # Collect and flash specific validation errors
             for field_name, errors in form.errors.items():
                 for error in errors:
                     flash(f"{field_name}: {error}", "danger")
 
-            # Render the template again with previous badge data
             return render_template(
                 "call_to_artists.html",
                 form=form,
@@ -176,11 +176,10 @@ def call_to_artists():
                 submission_open=submission_open,
                 submission_status=submission_status,
                 submission_deadline=submission_deadline,
-                previous_badge_data=previous_badge_data  # Pass previous data to template
+                previous_badge_data=previous_badge_data
             )
         else:
             try:
-                # Process form data and save to the database
                 name = form.name.data
                 email = form.email.data
                 phone_number = form.phone_number.data
@@ -194,16 +193,13 @@ def call_to_artists():
                 consent_to_data = form.consent_to_data.data
                 opt_in_featured_artwork = form.opt_in_featured_artwork.data
 
-                # Extract badge_ids and artwork_files from the form
                 badge_ids = [badge_upload.badge_id.data for badge_upload in form.badge_uploads.entries]
                 artwork_files = [badge_upload.artwork_file.data for badge_upload in form.badge_uploads.entries]
 
-                # Validate badge-artwork pairings
                 if len(badge_ids) != len(artwork_files) or not badge_ids:
                     flash("Each badge must have an associated artwork file.", "danger")
-                    return redirect(url_for("call_to_artists"))
+                    return redirect(url_for("main.call_to_artists"))
 
-                # Create submission record
                 submission = ArtistSubmission(
                     name=name,
                     email=email,
@@ -219,29 +215,25 @@ def call_to_artists():
                     opt_in_featured_artwork=opt_in_featured_artwork
                 )
                 db.session.add(submission)
-                db.session.flush()  # Flush to get the submission ID
+                db.session.flush()
 
-                # Process badge-artwork pairs
                 for badge_id, artwork_file in zip(badge_ids, artwork_files):
-                    # Validate badge
                     if not Badge.query.get(int(badge_id)):
                         flash("Invalid badge selection.", "danger")
                         db.session.rollback()
-                        return redirect(url_for("call_to_artists"))
+                        return redirect(url_for("main.call_to_artists"))
 
-                    # If artwork_file is a string, it's an existing file; skip saving
-                    if hasattr(artwork_file, "filename"):  # FileStorage object
+                    if hasattr(artwork_file, "filename"):
                         file_ext = os.path.splitext(artwork_file.filename)[1]
                         if not file_ext:
                             flash(f"Invalid file extension for uploaded file.", "danger")
                             db.session.rollback()
-                            return redirect(url_for("call_to_artists"))
+                            return redirect(url_for("main.call_to_artists"))
 
                         unique_filename = f"{uuid.uuid4()}{file_ext}"
                         artwork_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
                         artwork_file.save(artwork_path)
                     else:
-                        # Use the previously uploaded file
                         unique_filename = artwork_file
 
                     badge_artwork = BadgeArtwork(
@@ -251,14 +243,13 @@ def call_to_artists():
                     )
                     db.session.add(badge_artwork)
 
-                db.session.commit()  # Commit all changes
+                db.session.commit()
                 flash("Submission received successfully!", "success")
-                return redirect(url_for("submission_success"))
+                return redirect(url_for("main.submission_success"))
 
             except Exception as e:
                 db.session.rollback()
                 flash("An error occurred while processing your submission. Please try again.", "danger")
-                app.logger.error(f"Error processing submission: {e}")
 
     return render_template(
         "call_to_artists.html",
@@ -267,11 +258,11 @@ def call_to_artists():
         submission_open=submission_open,
         submission_status=submission_status,
         submission_deadline=submission_deadline,
-        previous_badge_data=previous_badge_data  # Pass previous data to template
+        previous_badge_data=previous_badge_data
     )
 
 
-@app.route("/call_to_youth_artists", methods=["GET", "POST"])
+@main_bp.route("/call_to_youth_artists", methods=["GET", "POST"])
 def call_to_youth_artists():
     submission_open = is_submission_open()
     submission_status = "Open" if submission_open else "Closed"
@@ -280,16 +271,15 @@ def call_to_youth_artists():
 
     form = YouthArtistSubmissionForm()
 
-    # Populate badge choices for the badge_id field
     badges = Badge.query.all()
-    badge_choices = [(None, "Select a badge")] + [(badge.id, badge.name) for badge in badges]  # Use None for blank placeholder
+    badge_choices = [(None, "Select a badge")] + [(badge.id, badge.name) for badge in badges]
     form.badge_id.choices = badge_choices
 
     if request.method == "POST":
 
         if not submission_open:
             flash("Submissions are currently closed. You cannot submit at this time.", "danger")
-            return redirect(url_for("call_to_youth_artists"))
+            return redirect(url_for("main.call_to_youth_artists"))
 
         if not form.validate_on_submit():
             for field_name, errors in form.errors.items():
@@ -305,7 +295,6 @@ def call_to_youth_artists():
             )
         else:
             try:
-                # Extract form data
                 name = form.name.data
                 age = form.age.data
                 parent_contact_info = form.parent_contact_info.data
@@ -315,27 +304,23 @@ def call_to_youth_artists():
                 badge_id = form.badge_id.data
                 artwork_file = form.artwork_file.data
 
-                # Validate badge selection
-                if badge_id is None:  # The placeholder is selected
+                if badge_id is None:
                     flash("Please select a valid badge.", "danger")
-                    return redirect(url_for("call_to_youth_artists"))
+                    return redirect(url_for("main.call_to_youth_artists"))
 
-                # Validate that the badge exists
                 if not Badge.query.get(badge_id):
                     flash("Invalid badge selection.", "danger")
-                    return redirect(url_for("call_to_youth_artists"))
+                    return redirect(url_for("main.call_to_youth_artists"))
 
-                # Save the uploaded artwork file
                 file_ext = os.path.splitext(artwork_file.filename)[1]
                 if not file_ext:
                     flash("Invalid file extension for uploaded file.", "danger")
-                    return redirect(url_for("call_to_youth_artists"))
+                    return redirect(url_for("main.call_to_youth_artists"))
 
                 unique_filename = f"{uuid.uuid4()}{file_ext}"
                 artwork_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
                 artwork_file.save(artwork_path)
 
-                # Save submission to the database
                 submission = YouthArtistSubmission(
                     name=name,
                     age=age,
@@ -350,12 +335,11 @@ def call_to_youth_artists():
                 db.session.commit()
 
                 flash("Submission received successfully!", "success")
-                return redirect(url_for("submission_success"))
+                return redirect(url_for("main.submission_success"))
 
             except Exception as e:
                 db.session.rollback()
                 flash("An error occurred while processing your submission. Please try again.", "danger")
-                app.logger.error(f"Error processing youth submission: {e}")
 
     return render_template(
         "call_to_youth_artists.html",
@@ -365,68 +349,87 @@ def call_to_youth_artists():
         submission_status=submission_status,
         submission_deadline=submission_deadline,
     )
-    
 
-@app.route("/submission-success")
+@main_bp.route("/submission-success")
 def submission_success():
     return render_template("submission_success.html")
 
 
-@app.route("/judges", methods=["GET", "POST"])
+@main_bp.route("/judges", methods=["GET", "POST"])
 def judges_password():
-    form = PasswordForm()
+    print(f"judges_password() Current user: {current_user}")
+    form = LoginForm()
 
-    admin_exists = Judge.query.filter_by(is_admin=True).first()
-    if not admin_exists:
-        flash("No admin exists. The first password entered will create the admin.", "info")
+    if current_user.is_authenticated:
+        # Redirect based on user's role
+        if current_user.is_admin:
+            return redirect(url_for("main.admin_page"))
+        else:
+            return redirect(url_for("main.judges_ballot"))
 
-    return render_template("judges_password.html", form=form)
-
-
-@app.route("/judges/validate", methods=["POST"])
-def validate_judge_password():
-    form = PasswordForm()
-    app.logger.debug("Entered /judges/validate route")
-    
+    # Handle login form submission
     if form.validate_on_submit():
-        app.logger.debug("Form validation successful")
-        password = form.password.data
-        app.logger.debug(f"Received password: {password}")
+        name = form.name.data.strip()
+        password = form.password.data.strip()
 
-        for judge in Judge.query.all():
-            app.logger.debug(f"Checking password for judge: {judge.name}")
-            if judge.check_password(password):
-                app.logger.debug(f"Password matched for judge: {judge.name}")
-                login_user(judge, remember=True)  # Ensure the session persists
-                app.logger.debug(f"Judge {judge.name} logged in successfully")
+        try:
+            # Check if any judges exist in the database
+            judge_exists = Judge.query.first()
 
-                next_page = request.args.get('next')
-                app.logger.debug(f"Received next parameter: {next_page}")
-                next_page = next_page if next_page else (
-                    url_for("admin_page") if judge.is_admin else url_for("judges_ballot")
-                )
-                return redirect(next_page)
+            if not judge_exists:
+                # Create an admin judge account if no judges exist
+                new_admin = Judge(name=name)
+                new_admin.set_password(password)
+                new_admin.is_admin = True
+                db.session.add(new_admin)
+                db.session.commit()
+                login_user(new_admin)
+                flash(f"Admin account created for {name}.", "success")
+                return redirect(url_for("main.admin_page"))
 
-        app.logger.warning("Password did not match any judge")
-        flash("Invalid password. Please try again.", "danger")
-    else:
-        app.logger.warning("Form validation failed")
-        flash("Form validation failed. Please try again.", "danger")
+            # Authenticate existing judge
+            judge = Judge.query.filter_by(name=name).first()
+            if judge and judge.check_password(password):
+                login_user(judge)
+                flash(f"Welcome, {judge.name}!", "success")
+                # Redirect based on judge's admin status
+                return redirect(url_for("main.admin_page") if judge.is_admin else url_for("main.judges_ballot"))
+            else:
+                flash("Invalid username or password.", "danger")
+
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error during login attempt: {str(e)}")
+            flash("An error occurred. Please try again later.", "danger")
+            return redirect(url_for("main.judges_password"))
+
+    elif form.is_submitted():
+        # Handles invalid form submissions
+        flash("Invalid form submission. Please check your input.", "danger")
+
+    return render_template('judges_password.html', form=form)
     
-    return redirect(url_for("judges_password"))
 
-
-@app.route("/judges/ballot", methods=["GET", "POST"])
+@main_bp.route("/judges/ballot", methods=["GET", "POST"])
 @login_required
 def judges_ballot():
+    # Check if the user is logged in (handled by @login_required)
     if not current_user.is_authenticated:
         flash("Unauthorized access. Please log in.", "danger")
-        return redirect(url_for("judges_password"))
+        return redirect(url_for("main.judges_password"))
 
-    # Retrieve the current judge's ID
+    logout_form = LogoutForm()
+
+    # Handle logout form submission
+    if logout_form.validate_on_submit():
+        logout_user()
+        session.clear()  # Clear session data to ensure full logout
+        flash("You have been logged out.", "info")
+        return redirect(url_for("main.judges_password"))
+
+    # Retrieve artist and youth submissions as in your original code
     judge_id = current_user.id
 
-    # Fetch all artist submissions
     artist_submissions = db.session.query(
         ArtistSubmission.id,
         ArtistSubmission.name,
@@ -441,9 +444,8 @@ def judges_ballot():
         BadgeArtwork, BadgeArtwork.submission_id == ArtistSubmission.id
     ).join(
         Badge, BadgeArtwork.badge_id == Badge.id
-    ).distinct().all()  # Eliminate duplicates with DISTINCT
+    ).distinct().all()
 
-    # Fetch all youth submissions
     youth_submissions = db.session.query(
         YouthArtistSubmission.id,
         YouthArtistSubmission.name,
@@ -458,12 +460,12 @@ def judges_ballot():
         Badge, YouthArtistSubmission.badge_id == Badge.id
     ).distinct().all()
 
-    # Prepare artist submissions
+    # Retrieve saved votes
     saved_votes = db.session.query(JudgeVote).filter_by(judge_id=judge_id).order_by(JudgeVote.rank).all()
     ranked_submission_ids = [vote.submission_id for vote in saved_votes]
 
+    # Prepare submissions (ranked and unranked)
     if saved_votes:
-        # If votes exist, use saved order
         ranked_submissions = [
             submission for submission in artist_submissions if submission.id in ranked_submission_ids
         ]
@@ -473,17 +475,15 @@ def judges_ballot():
         ]
         prepared_artist_submissions = ranked_submissions + unranked_submissions
     else:
-        # If no votes exist, randomize submissions
         import random
         random.shuffle(artist_submissions)
         prepared_artist_submissions = artist_submissions
 
-    # Prepare youth submissions (similar logic)
+    # Prepare youth submissions
     saved_youth_votes = db.session.query(JudgeVote).filter_by(judge_id=judge_id).order_by(JudgeVote.rank).all()
     ranked_youth_submission_ids = [vote.submission_id for vote in saved_youth_votes]
 
     if saved_youth_votes:
-        # If votes exist, use saved order
         ranked_youth_submissions = [
             submission for submission in youth_submissions if submission.id in ranked_youth_submission_ids
         ]
@@ -493,31 +493,26 @@ def judges_ballot():
         ]
         prepared_youth_submissions = ranked_youth_submissions + unranked_youth_submissions
     else:
-        # If no votes exist, randomize youth submissions
         random.shuffle(youth_submissions)
         prepared_youth_submissions = youth_submissions
 
-    # CSRF form
     form = RankingForm()
 
-    # Save rankings when submitted
+    # Handle ranking form submission
     if request.method == "POST":
-        # Process rankings for regular artist submissions
         ranked_votes = request.form.get("rank", "")
         if ranked_votes:
-            ranked_votes = ranked_votes.split(",")  # Convert to a list of submission IDs
+            ranked_votes = ranked_votes.split(",")
             rank = 1
             try:
                 with db.session.begin_nested():
-                    # Clear existing votes for this judge
                     JudgeVote.query.filter_by(judge_id=judge_id).delete()
 
-                    # Save new rankings for artist submissions
                     for submission_id in ranked_votes:
                         badge_artwork = BadgeArtwork.query.filter_by(submission_id=submission_id).first()
                         if not badge_artwork:
                             flash(f"No BadgeArtwork found for submission ID {submission_id}.", "danger")
-                            return redirect(url_for("judges_ballot"))
+                            return redirect(url_for("main.judges_ballot"))
 
                         vote = JudgeVote(
                             judge_id=judge_id,
@@ -531,18 +526,16 @@ def judges_ballot():
                 db.session.commit()
             except Exception as e:
                 db.session.rollback()
-                app.logger.error(f"Error saving artist rankings: {e}")
                 flash("An error occurred while saving artist rankings. Please try again.", "danger")
-                return redirect(url_for("judges_ballot"))
+                return redirect(url_for("main.judges_ballot"))
 
-        # Process rankings for youth submissions
+        # Handle youth ranking similarly
         ranked_youth_votes = request.form.get("youth_rank", "")
         if ranked_youth_votes:
-            ranked_youth_votes = ranked_youth_votes.split(",")  # Convert to a list of submission IDs
+            ranked_youth_votes = ranked_youth_votes.split(",")
             rank = 1
             try:
                 with db.session.begin_nested():
-                    # Save new rankings for youth submissions
                     for submission_id in ranked_youth_votes:
                         vote = JudgeVote(
                             judge_id=judge_id,
@@ -555,29 +548,29 @@ def judges_ballot():
                 db.session.commit()
             except Exception as e:
                 db.session.rollback()
-                app.logger.error(f"Error saving youth rankings: {e}")
                 flash("An error occurred while saving youth rankings. Please try again.", "danger")
-                return redirect(url_for("judges_ballot"))
+                return redirect(url_for("main.judges_ballot"))
 
-        return redirect(url_for("judges_submission_success"))
+        return redirect(url_for("main.judges_submission_success"))
 
     return render_template(
         "judges_ballot.html",
         artist_submissions=prepared_artist_submissions,
         youth_submissions=prepared_youth_submissions,
-        form=form
+        form=form,
+        logout_form=logout_form
     )
 
 
-@app.route("/judges/results", methods=["GET"])
+
+@main_bp.route("/judges/results", methods=["GET"])
 @login_required
 def judges_results():
     if not current_user.is_admin:
         flash("Unauthorized access. Admin privileges required.", "danger")
-        return redirect(url_for("index"))
+        return redirect(url_for("main.index"))
     from sqlalchemy import func
 
-    # Aggregate scores for each artwork (BadgeArtwork) - General Submissions
     results = db.session.query(
         ArtistSubmission.name.label("artist_name"),
         Badge.name.label("badge_name"),
@@ -593,10 +586,9 @@ def judges_results():
     ).group_by(
         BadgeArtwork.id, ArtistSubmission.name, Badge.name, BadgeArtwork.artwork_file
     ).order_by(
-        func.sum(JudgeVote.rank)  # Lower score = higher ranking
+        func.sum(JudgeVote.rank)
     ).all()
 
-    # Aggregate scores for Youth Submissions
     youth_results = db.session.query(
         YouthArtistSubmission.name.label("artist_name"),
         YouthArtistSubmission.age.label("age"),
@@ -605,16 +597,15 @@ def judges_results():
         YouthArtistSubmission.artwork_file.label("artwork_file"),
         func.sum(JudgeVote.rank).label("total_score")
     ).join(
-        JudgeVote, YouthArtistSubmission.id == JudgeVote.submission_id  # Link JudgeVote to YouthArtistSubmission
+        JudgeVote, YouthArtistSubmission.id == JudgeVote.submission_id
     ).join(
         Badge, YouthArtistSubmission.badge_id == Badge.id
     ).group_by(
         YouthArtistSubmission.id, YouthArtistSubmission.name, YouthArtistSubmission.age, Badge.name, YouthArtistSubmission.artwork_file
     ).order_by(
-        func.sum(JudgeVote.rank)  # Lower score = higher ranking
+        func.sum(JudgeVote.rank)
     ).all()
 
-    # Fetch individual judge votes for each artwork - General Submissions
     judge_votes = db.session.query(
         JudgeVote.badge_artwork_id,
         Judge.name.label("judge_name"),
@@ -623,7 +614,6 @@ def judges_results():
         Judge, Judge.id == JudgeVote.judge_id
     ).all()
 
-    # Fetch individual judge votes for youth submissions
     youth_judge_votes = db.session.query(
         JudgeVote.submission_id.label("youth_submission_id"),
         Judge.name.label("judge_name"),
@@ -632,7 +622,6 @@ def judges_results():
         Judge, Judge.id == JudgeVote.judge_id
     ).all()
 
-    # Organize judge votes by badge_artwork_id (General Submissions)
     judge_votes_by_artwork = {}
     for vote in judge_votes:
         artwork_id = vote.badge_artwork_id
@@ -643,7 +632,6 @@ def judges_results():
             "rank": vote.rank
         })
 
-    # Organize judge votes by youth_submission_id
     judge_votes_by_youth_submission = {}
     for vote in youth_judge_votes:
         submission_id = vote.youth_submission_id
@@ -654,15 +642,12 @@ def judges_results():
             "rank": vote.rank
         })
 
-    # Fetch distinct judge IDs who have voted
     voted_judges_ids = db.session.query(JudgeVote.judge_id).distinct().all()
     voted_judges_ids = [judge_id[0] for judge_id in voted_judges_ids]
 
-    # Get the names of judges who have voted
     voted_judges = db.session.query(Judge.name).filter(Judge.id.in_(voted_judges_ids)).all()
     voted_judges = [judge[0] for judge in voted_judges]
 
-    # Fetch all judge names and determine who has not voted
     all_judges = db.session.query(Judge).all()
     judges_status = {
         "voted": voted_judges,
@@ -679,30 +664,25 @@ def judges_results():
     )
 
 
-
-@app.route("/judges/submission-success")
+@main_bp.route("/judges/submission-success")
 def judges_submission_success():
     return render_template("judges_submission_success.html")
 
 
-@app.route("/judges/ballot/delete/<int:submission_id>", methods=["POST"])
+@main_bp.route("/judges/ballot/delete/<int:submission_id>", methods=["POST"])
 @login_required
 def delete_submission(submission_id):
     if not current_user.is_admin:
         flash("Unauthorized access. Admin privileges required.", "danger")
-        return redirect(url_for("index"))
+        return redirect(url_for("main.index"))
 
-    # Fetch the submission to delete
     submission = ArtistSubmission.query.get_or_404(submission_id)
 
     try:
-        # Delete associated BadgeArtwork entries
         BadgeArtwork.query.filter_by(submission_id=submission.id).delete()
 
-        # Delete associated JudgeVote entries
         JudgeVote.query.filter_by(submission_id=submission.id).delete()
 
-        # Delete the submission itself
         db.session.delete(submission)
         db.session.commit()
         return jsonify({"success": "Submission deleted successfully."}), 200
@@ -712,33 +692,29 @@ def delete_submission(submission_id):
         return jsonify({"error": "An error occurred while deleting the submission."}), 500
 
 
-@app.route("/badge-list")
+@main_bp.route("/badge-list")
 def badge_list():
-    # Fetch all badges
     badges = Badge.query.all()
 
-    # Render the badge list template
     return jsonify([{"id": badge.id, "name": badge.name, "description": badge.description} for badge in badges])
 
 
-@app.route("/api/badges", methods=["GET"])
+@main_bp.route("/api/badges", methods=["GET"])
 def api_badges():
-    # Fetch all badges from the database
     badges = Badge.query.all()
 
-    # Return badge data as JSON, including the 'id'
     return jsonify([
         {"id": badge.id, "name": badge.name, "description": badge.description}
         for badge in badges
     ])
 
 
-@app.route("/admin/badges", methods=["GET", "POST"])
+@main_bp.route("/admin/badges", methods=["GET", "POST"])
 @login_required
 def manage_badges():
     if not current_user.is_admin:
         flash("Unauthorized access. Admin privileges required.", "danger")
-        return redirect(url_for("index"))
+        return redirect(url_for("main.index"))
 
     if request.method == "POST":
         action = request.form.get("action")
@@ -747,12 +723,10 @@ def manage_badges():
             name = request.form.get("name")
             description = request.form.get("description")
 
-            # Check if the badge name is unique
             existing_badge = Badge.query.filter_by(name=name).first()
             if existing_badge:
                 flash(f"Badge '{name}' already exists!", "danger")
             else:
-                # Add new badge
                 new_badge = Badge(name=name, description=description)
                 db.session.add(new_badge)
                 db.session.commit()
@@ -763,7 +737,6 @@ def manage_badges():
             name = request.form.get("name")
             description = request.form.get("description")
 
-            # Update badge
             badge = Badge.query.get(badge_id)
             if badge:
                 badge.name = name
@@ -776,7 +749,6 @@ def manage_badges():
         elif action == "delete":
             badge_id = request.form.get("badge_id")
 
-            # Delete badge
             badge = Badge.query.get(badge_id)
             if badge:
                 db.session.delete(badge)
@@ -789,16 +761,15 @@ def manage_badges():
             csv_file = request.files.get("csv_file")
             if not csv_file or not csv_file.filename.endswith(".csv"):
                 flash("Please upload a valid CSV file.", "danger")
-                return redirect(url_for("manage_badges"))
+                return redirect(url_for("main.manage_badges"))
 
-            # Parse and process CSV file
             try:
                 csv_reader = csv.reader(TextIOWrapper(csv_file, encoding="utf-8"))
-                header = next(csv_reader)  # Skip the header row
+                header = next(csv_reader)
 
                 if header != ["Badge Name", "Badge Description"]:
                     flash("Invalid CSV format. Ensure the headers are 'Badge Name' and 'Badge Description'.", "danger")
-                    return redirect(url_for("manage_badges"))
+                    return redirect(url_for("main.manage_badges"))
 
                 added_badges = []
                 for row in csv_reader:
@@ -811,13 +782,11 @@ def manage_badges():
                         flash(f"Missing data in row: {row}. Skipping...", "warning")
                         continue
 
-                    # Check for existing badge
                     existing_badge = Badge.query.filter_by(name=name).first()
                     if existing_badge:
                         flash(f"Badge '{name}' already exists. Skipping...", "warning")
                         continue
 
-                    # Add new badge
                     new_badge = Badge(name=name, description=description)
                     db.session.add(new_badge)
                     added_badges.append(name)
@@ -836,25 +805,24 @@ def manage_badges():
     return render_template("admin_badges.html", badges=badges)
 
 
-@app.route("/validate_email", methods=["POST"])
+@main_bp.route("/validate_email", methods=["POST"])
 def validate_email():
     email = request.json.get("email")
     if not email:
         return jsonify({"error": "Email is required"}), 400
 
-    # Check if the email already exists in the database
     existing_submission = ArtistSubmission.query.filter_by(email=email).first()
     if existing_submission:
-        return jsonify({"error": "Email is already in use"}), 409  # 409 Conflict
+        return jsonify({"error": "Email is already in use"}), 409
     return jsonify({"success": "Email is available"}), 200
 
 
-@app.route("/manage_judges", methods=["GET", "POST"])
+@main_bp.route("/manage_judges", methods=["GET", "POST"])
 @login_required
 def manage_judges():
     if not current_user.is_admin:
         flash("Unauthorized access. Admin privileges required.", "danger")
-        return redirect(url_for("index"))
+        return redirect(url_for("main.index"))
 
     judges = Judge.query.all()
 
@@ -892,13 +860,11 @@ def manage_judges():
     return render_template("manage_judges.html", judges=judges)
 
 
-@app.route("/api/artwork-detail/<int:item_id>", methods=["GET"])
+@main_bp.route("/api/artwork-detail/<int:item_id>", methods=["GET"])
 @login_required
 def api_artwork_detail(item_id):
-    # Attempt to fetch as BadgeArtwork first
     badge_artwork = BadgeArtwork.query.options(joinedload(BadgeArtwork.submission)).filter_by(id=item_id).first()
     if badge_artwork:
-        # If found, return details specific to BadgeArtwork
         submission = badge_artwork.submission
         artwork_details = {
             "name": submission.name,
@@ -920,10 +886,8 @@ def api_artwork_detail(item_id):
         }
         return jsonify(artwork_details)
 
-    # If not a BadgeArtwork, attempt to fetch as ArtistSubmission
     submission = ArtistSubmission.query.options(joinedload(ArtistSubmission.badge_artworks)).filter_by(id=item_id).first()
     if submission:
-        # If found, return details specific to ArtistSubmission
         badge_artworks = [
             {
                 "badge_id": artwork.badge_id,
@@ -945,22 +909,19 @@ def api_artwork_detail(item_id):
         }
         return jsonify(submission_details)
 
-    # If neither is found, return an error
     return jsonify({"error": "Item not found"}), 404
 
 
-@app.route("/admin/clear_votes", methods=["POST"])
+@main_bp.route("/admin/clear_votes", methods=["POST"])
 @login_required
 def clear_votes():
     if not current_user.is_admin:
         flash("Unauthorized access. Admin privileges required.", "danger")
-        return redirect(url_for("index"))
+        return redirect(url_for("main.index"))
     try:
-        # Delete all votes from the JudgeVote table
         db.session.query(JudgeVote).delete()
         db.session.commit()
         return jsonify({"success": "All judge votes have been cleared successfully."}), 200
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f"Error clearing votes: {e}")
         return jsonify({"error": "An error occurred while clearing votes."}), 500

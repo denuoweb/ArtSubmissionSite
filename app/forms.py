@@ -1,4 +1,3 @@
-
 from flask_wtf import FlaskForm
 from wtforms import Form, FormField, IntegerField, HiddenField, FieldList, BooleanField, PasswordField, StringField, TextAreaField, FileField, SubmitField, SelectField
 from wtforms.validators import Regexp, NumberRange, DataRequired, Email, URL, Optional, Length, ValidationError
@@ -228,14 +227,21 @@ class YouthArtistSubmissionForm(FlaskForm):
     submit = SubmitField("Submit")
 
 
-class PasswordForm(FlaskForm):
+class LoginForm(FlaskForm):
+    name = StringField(
+        "Name",
+        validators=[DataRequired(), Length(max=50)],
+        render_kw={"placeholder": "Enter your name"}
+    )
     password = PasswordField(
-        "", 
+        "Password", 
         validators=[DataRequired(), Length(min=4, max=20)],
         render_kw={"placeholder": "Password"}
     )
     submit = SubmitField("Submit")
 
+class LogoutForm(FlaskForm):
+    submit = SubmitField('Logout')
 
 class RankingForm(FlaskForm):
     rank = HiddenField("Rank")

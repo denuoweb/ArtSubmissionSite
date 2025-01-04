@@ -3,12 +3,14 @@
 {% block content %}
 <h1>Admin Page</h1>
 
+<!-- Links Section -->
 <h2>Links</h2>
-<p><a href="{{ url_for('judges_ballot') }}" class="btn btn-sm btn-success earth-btn">Ballot</a></p><br>
-<p><a href="{{ url_for('judges_results') }}" class="btn btn-sm btn-success earth-btn">View Results</a></p><br>
-<p><a href="{{ url_for('manage_badges') }}" class="btn btn-sm btn-success earth-btn">Manage Badges</a></p><br>
-<p><a href="{{ url_for('manage_judges') }}" class="btn btn-sm btn-success earth-btn">Manage Judges</a></p><br>
+<p><a href="{{ url_for('main.judges_ballot') }}" class="btn btn-sm btn-success earth-btn">Ballot</a></p><br>
+<p><a href="{{ url_for('main.judges_results') }}" class="btn btn-sm btn-success earth-btn">View Results</a></p><br>
+<p><a href="{{ url_for('main.manage_badges') }}" class="btn btn-sm btn-success earth-btn">Manage Badges</a></p><br>
+<p><a href="{{ url_for('main.manage_judges') }}" class="btn btn-sm btn-success earth-btn">Manage Judges</a></p><br>
 
+<!-- Update Submission Dates Section -->
 <h2>Update Submission Dates</h2>
 <form method="POST">
     {{ dates_form.hidden_tag() }}
@@ -23,5 +25,11 @@
     <button type="submit" class="btn btn-primary">Update Dates</button>
 </form>
 
+<!-- Logout Button Section -->
+<h2>Logout</h2>
+<form method="POST" action="{{ url_for('main.admin_page') }}">
+    {{ logout_form.hidden_tag() }}
+    <button type="submit" class="btn btn-danger">Logout</button>
+</form>
 
 {% endblock %}
