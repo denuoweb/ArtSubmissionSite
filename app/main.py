@@ -128,9 +128,10 @@ def admin_page():
         logout_form=logout_form
     )
 
-@main_bp.route("/call_to_artists", methods=["GET", "POST"])
-def call_to_artists():
+@main_bp.route("/call_for_artists", methods=["GET", "POST"])
+def call_for_artists():
     submission_open = is_submission_open()
+    is_admin = session.get('is_admin', False)
     submission_status = "Open" if submission_open else "Closed"
     submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
     submission_deadline = submission_period.submission_end.strftime("%B %d, %Y at %I:%M %p %Z") if submission_period else "N/A"
@@ -146,9 +147,9 @@ def call_to_artists():
     previous_badge_data = []
 
     if request.method == "POST":
-        if not submission_open:
+        if not submission_open and not is_admin:
             flash("Submissions are currently closed. You cannot submit at this time.", "danger")
-            return redirect(url_for("main.call_to_artists"))
+            return redirect(url_for("main.call_for_artists"))
 
         for badge_upload in form.badge_uploads.entries:
             badge_id = badge_upload.badge_id.data
@@ -170,13 +171,14 @@ def call_to_artists():
                     flash(f"{field_name}: {error}", "danger")
 
             return render_template(
-                "call_to_artists.html",
+                "call_for_artists.html",
                 form=form,
                 badges=badges,
                 submission_open=submission_open,
                 submission_status=submission_status,
                 submission_deadline=submission_deadline,
-                previous_badge_data=previous_badge_data
+                previous_badge_data=previous_badge_data,
+                is_admin=is_admin
             )
         else:
             try:
@@ -198,7 +200,7 @@ def call_to_artists():
 
                 if len(badge_ids) != len(artwork_files) or not badge_ids:
                     flash("Each badge must have an associated artwork file.", "danger")
-                    return redirect(url_for("main.call_to_artists"))
+                    return redirect(url_for("main.call_for_artists"))
 
                 submission = ArtistSubmission(
                     name=name,
@@ -221,14 +223,14 @@ def call_to_artists():
                     if not Badge.query.get(int(badge_id)):
                         flash("Invalid badge selection.", "danger")
                         db.session.rollback()
-                        return redirect(url_for("main.call_to_artists"))
+                        return redirect(url_for("main.call_for_artists"))
 
                     if hasattr(artwork_file, "filename"):
                         file_ext = os.path.splitext(artwork_file.filename)[1]
                         if not file_ext:
                             flash(f"Invalid file extension for uploaded file.", "danger")
                             db.session.rollback()
-                            return redirect(url_for("main.call_to_artists"))
+                            return redirect(url_for("main.call_for_artists"))
 
                         unique_filename = f"{uuid.uuid4()}{file_ext}"
                         artwork_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
@@ -252,13 +254,14 @@ def call_to_artists():
                 flash("An error occurred while processing your submission. Please try again.", "danger")
 
     return render_template(
-        "call_to_artists.html",
+        "call_for_artists.html",
         form=form,
         badges=badges,
         submission_open=submission_open,
         submission_status=submission_status,
         submission_deadline=submission_deadline,
-        previous_badge_data=previous_badge_data
+        previous_badge_data=previous_badge_data,
+        is_admin=is_admin
     )
 
 

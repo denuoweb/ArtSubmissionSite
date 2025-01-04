@@ -52,9 +52,14 @@
     <a href="#" onclick="openBadgeModal(); return false;">here</a>. Each badge represents a specific quest, such as cycling to local landmarks, participating in community events, or promoting sustainability.
 </p>
 
-{% if not submission_open %}
+{% if not submission_open and not session.get('is_admin', False) %}
 <div class="alert alert-warning">
     Submissions are currently closed. You can review the details, but submissions cannot be submitted at this time.
+</div>
+<fieldset disabled>
+{% elif not submission_open and session.get('is_admin', False) %}
+<div class="alert alert-info">
+    Submissions are currently closed for general participants. However, as an admin or judge, you can still submit.
 </div>
 {% endif %}
 
