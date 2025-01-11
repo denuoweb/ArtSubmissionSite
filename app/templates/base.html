@@ -18,7 +18,8 @@
     <script>const basePath = "{{ application_root }}";</script>
 </head>
 <body data-base-path="{{ config['APPLICATION_ROOT'] | default('') }}">
-    <div class="container">
+    <div class="container min-vh-100 d-flex flex-column">
+        <!-- Original Navbar -->
         <nav>
             <ul>
                 <li class="{% if request.endpoint == 'main.index' %}active{% endif %}">
@@ -48,9 +49,47 @@
         {% endif %}
         {% endwith %}
         
-        <main>
+        <main class="flex-grow-1 pb-4">
             {% block content %}{% endblock %}
         </main>
+        
+        <!-- Sticky Footer -->
+        <footer class="footer mt-auto bg-light border-top">
+            <div class="container text-center py-3">
+                <div class="row align-items-center">
+                    <!-- Lane County Cultural Coalition Section -->
+                    <div class="col-md-6">
+                        <img src="{{ url_for('static', filename='images/LCCC.jpg') }}" alt="Lane County Cultural Coalition Logo" class="img-fluid" style="max-height: 60px;">
+                        <p class="mt-2">
+                            <strong>2025 Lane County Cultural Coalition</strong><br>
+                            Cultural Opportunity Grant Agreement<br>
+                            <a href="mailto:laneculture@lanearts.org">laneculture@lanearts.org</a> | 
+                            <a href="tel:+15414852278">541-485-2278</a><br>
+                            <a href="https://lanearts.org/" target="_blank">Lane County Cultural Coalition Website</a>
+                        </p>
+                    </div>
+        
+                    <!-- Oregon Cultural Trust Section -->
+                    <div class="col-md-6">
+                        <img src="{{ url_for('static', filename='images/CTC.png') }}" alt="Oregon Cultural Trust Logo" class="img-fluid" style="max-height: 60px;">
+                        <p class="mt-2">
+                            <strong>This project is supported by the Oregon Cultural Trust.</strong><br>
+                            <a href="https://culturaltrust.org/" target="_blank">Oregon Cultural Trust Website</a>
+                        </p>
+                    </div>
+                </div>
+        
+                <!-- Grantee and Project Details -->
+                <div class="mt-3">
+                    <p>
+                        <strong>Grantee:</strong> Tomoko Sekiguchi<br>
+                        <strong>Project:</strong> Artist Badges for the Quest by Cycle Game<br>
+                        <strong>Grant Award:</strong> $2482
+                    </p>
+                </div>
+            </div>
+        </footer>
+        
     </div>
     
     {% block scripts %}{% endblock %}
