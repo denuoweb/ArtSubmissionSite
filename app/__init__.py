@@ -27,7 +27,8 @@ def create_app():
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     app.config['SESSION_COOKIE_DOMAIN'] = False
 
-    from app.models import db
+    from app.models import db, User
+    from werkzeug.security import generate_password_hash
 
     # Initialize database and migration
     migrate = Migrate(app, db)
@@ -46,12 +47,11 @@ def create_app():
     login_manager.login_view = "auth.judges_login"
     login_manager.login_message_category = "warning"
     login_manager.session_protection = "strong"  # Enforce stronger session protection
-    
+
     @login_manager.user_loader
     def load_user(user_id):
         from app.models import User  # Local import to avoid circular dependency
         return User.query.get(int(user_id))
-
 
     @app.after_request
     def add_cache_control_headers(response):
@@ -59,7 +59,6 @@ def create_app():
             response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
             response.headers['Pragma'] = 'no-cache'
         return response
-
 
     # Assign the custom_url_for to Jinja's global context
     app.jinja_env.globals['url_for'] = custom_url_for
@@ -70,5 +69,17 @@ def create_app():
     app.jinja_env.globals['get_rank_suffix'] = get_rank_suffix
 
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+    # Create an admin user if none exists
+    with app.app_context():
+        if db.session.query(User).count() == 0:
+            admin_user = User(
+                name="admin",
+                password_hash=generate_password_hash("Questadmin1!"),
+                is_admin=True
+            )
+            db.session.add(admin_user)
+            db.session.commit()
+            app.logger.info("Admin user created with username 'admin' and default password.")
 
     return app
