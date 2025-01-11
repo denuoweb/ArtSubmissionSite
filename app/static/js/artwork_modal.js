@@ -57,7 +57,7 @@ function openArtworkModal(_, name, submissionId) {
           document.getElementById('modalStatement').textContent = data.statement;
           document.getElementById('modalDemographic').textContent = data.demographic_identity || 'N/A';
           document.getElementById('modalLaneCounty').textContent = data.lane_county_connection || 'N/A';
-          document.getElementById('modalAccessibility').textContent = data.accessibility_needs || 'N/A';
+          document.getElementById('modalAccessibility').textContent = data.hear_about_contest || 'N/A';
           document.getElementById('modalFutureEngagement').textContent = data.future_engagement || 'N/A';
           const optInSpan = document.getElementById('modalFeaturedOptIn');
           optInSpan.textContent = data.opt_in_featured_artwork ? "Yes" : "No";

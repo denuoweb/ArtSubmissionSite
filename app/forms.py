@@ -111,13 +111,13 @@ class ArtistSubmissionForm(FlaskForm):  # Form corrections and updates
         ],
         render_kw={"placeholder": "Describe your connection to Lane County."}
     )
-    accessibility_needs = TextAreaField(
-        "Do you have any accessibility needs we can accommodate? (500 characters max)",
+    hear_about_contest = TextAreaField(
+        "How did you hear about the badge contest? (500 characters max)",
         validators=[
             Optional(),
             Length(max=500, message="Response cannot exceed 500 characters.")
         ],
-        render_kw={"placeholder": "Translation services, assistance, etc."}
+        render_kw={"placeholder": "Class announcement, Social Media post, etc."}
     )
     future_engagement = TextAreaField(
         "Are you interested in being involved in future projects? (500 characters max)",

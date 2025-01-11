@@ -314,7 +314,7 @@ def call_for_artists():
                 statement=form.statement.data,
                 demographic_identity=form.demographic_identity.data,
                 lane_county_connection=form.lane_county_connection.data,
-                accessibility_needs=form.accessibility_needs.data,
+                hear_about_contest=form.hear_about_contest.data,
                 future_engagement=form.future_engagement.data,
                 consent_to_data=form.consent_to_data.data,
                 opt_in_featured_artwork=form.opt_in_featured_artwork.data,

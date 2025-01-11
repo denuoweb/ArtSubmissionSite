@@ -384,7 +384,7 @@ def api_artwork_detail(item_id):
             "statement": submission.statement,
             "demographic_identity": submission.demographic_identity,
             "lane_county_connection": submission.lane_county_connection,
-            "accessibility_needs": submission.accessibility_needs,
+            "hear_about_contest": submission.hear_about_contest,
             "future_engagement": submission.future_engagement,
             "badge_artworks": [
                 {
@@ -412,7 +412,7 @@ def api_artwork_detail(item_id):
             "statement": submission.statement,
             "demographic_identity": submission.demographic_identity,
             "lane_county_connection": submission.lane_county_connection,
-            "accessibility_needs": submission.accessibility_needs,
+            "hear_about_contest": submission.hear_about_contest,
             "future_engagement": submission.future_engagement,
             "badge_artworks": badge_artworks,
             "opt_in_featured_artwork": submission.opt_in_featured_artwork
