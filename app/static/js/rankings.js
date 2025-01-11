@@ -12,14 +12,17 @@ document.addEventListener("DOMContentLoaded", function () {
     const rankInput = document.getElementById("rank-input");
     const rankingForm = document.querySelector("#ranking-form");
 
-    // Initialize SortableJS on the rankings list
-    Sortable.create(rankingsList, {
-        animation: 150,
-        onEnd: function () {
-            updateRankings(); // Update rankings display and hidden input
-            autoSaveRankings(); // Trigger auto-save on reorder
-        },
-    });
+    if (rankingsList) {
+        Sortable.create(rankingsList, {
+            animation: 150,
+            onEnd: function () {
+                updateRankings(); // Update rankings display and hidden input
+                autoSaveRankings(); // Trigger auto-save on reorder
+            },
+        });
+    } else {
+        console.error("Element #rankings-list not found.");
+    }
 
     // Enable drag-and-drop ranking for youth submissions
     const youthRankingsList = document.getElementById("youth-rankings-list");

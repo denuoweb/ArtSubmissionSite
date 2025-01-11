@@ -7,7 +7,7 @@
     <a href="{{ url_for('admin.admin_page') }}" class="btn btn-secondary">Back to Admin Dashboard</a>
 {% endif %}
 
-<!-- Logout Button Section -->
+<!-- Logout Form -->
 <h2>Logout</h2>
 <form method="POST" action="{{ url_for('auth.logout') }}">
     {{ logout_form.csrf_token() }}
@@ -17,45 +17,54 @@
 <!-- Tabs Navigation -->
 <ul class="nav nav-tabs" id="ballotTabs" role="tablist">
     <li class="nav-item" role="presentation">
-        <button 
-            class="nav-link active" 
-            id="current-tab" 
-            data-bs-toggle="tab" 
-            data-bs-target="#current-submissions" 
-            type="button" 
-            role="tab" 
-            aria-controls="current-submissions" 
-            aria-selected="true">
+        <button class="nav-link active" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" type="button" role="tab" aria-controls="general" aria-selected="true">
             General Submissions
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button 
-            class="nav-link" 
-            id="youth-tab" 
-            data-bs-toggle="tab" 
-            data-bs-target="#youth-submissions" 
-            type="button"
-            role="tab" 
-            aria-controls="youth-submissions" 
-            aria-selected="false">
+        <button class="nav-link" id="youth-tab" data-bs-toggle="tab" data-bs-target="#youth" type="button" role="tab" aria-controls="youth" aria-selected="false">
             Youth Submissions
         </button>
     </li>
 </ul>
 
-<!-- Tabs Content -->
-<div class="tab-content mt-3" id="ballotTabsContent">
+<!-- Tab Content -->
+<div class="tab-content mt-3">
     <!-- General Submissions Tab -->
-    <div class="tab-pane show active" id="current-submissions" role="tabpanel" aria-labelledby="current-tab">
-        
+    <div class="tab-pane show active" id="general" role="tabpanel" aria-labelledby="general-tab">
+        <form id="ranking-form" action="{{ url_for('main.judges_ballot') }}" method="POST">
+            {{ rank_form.hidden_tag() }}
+            <input type="hidden" id="rank-input" name="rank">
+            <input type="hidden" name="form_name" value="ranking_form">
+            <div id="rankings-list" class="sortable-list">
+                {% for submission in artist_submissions %}
+                <div class="rank-item" data-id="{{ submission.id }}">
+                    <span class="rank-position"></span> {{ submission.name }}
+                </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">Submit Rankings</button>
+        </form>
     </div>
 
     <!-- Youth Submissions Tab -->
-    <div class="tab-pane" id="youth-submissions" role="tabpanel" aria-labelledby="youth-tab">
-        
+    <div class="tab-pane" id="youth" role="tabpanel" aria-labelledby="youth-tab">
+        <form id="youth-ranking-form" action="{{ url_for('main.judges_ballot') }}" method="POST">
+            {{ rank_form.hidden_tag() }}
+            <input type="hidden" id="youth-rank-input" name="rank">
+            <input type="hidden" name="form_name" value="youth_ranking_form">
+            <div id="youth-rankings-list" class="sortable-list">
+                {% for submission in youth_submissions %}
+                <div class="rank-item" data-id="{{ submission.id }}">
+                    <span class="rank-position"></span> {{ submission.name }}
+                </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">Submit Youth Rankings</button>
+        </form>
     </div>
 </div>
+
 <!-- Artwork Modal -->
 <div id="artworkModal" class="modal">
     <div class="modal-content">
@@ -85,11 +94,11 @@
     </div>
 </div>
 
-
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/delete_submission.js') }}"></script>
+<script src="{{ url_for('static', filename='js/rankings.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <script src="{{ url_for('static', filename='js/artwork_modal.js') }}"></script>
 {% endblock %}
