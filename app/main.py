@@ -381,19 +381,17 @@ def call_for_artists():
         is_admin=is_admin,
         application_root=application_root
     )
-
-
 @main_bp.route("/call_for_youth_artists", methods=["GET", "POST"])
 def call_for_youth_artists():
     try:
         submission_open = is_submission_open()
+        is_admin = getattr(current_user, 'is_admin', False)
         submission_status = "Open" if submission_open else "Closed"
         submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
         submission_deadline = (
             submission_period.submission_end.strftime("%B %d, %Y at %I:%M %p %Z")
             if submission_period else "N/A"
         )
-
 
         form = YouthArtistSubmissionForm()
 
@@ -402,8 +400,7 @@ def call_for_youth_artists():
         form.badge_id.choices = badge_choices
 
         if request.method == "POST":
-
-            if not submission_open:
+            if not submission_open and not is_admin:
                 flash("Submissions are currently closed. You cannot submit at this time.", "danger")
                 return redirect(url_for("main.call_for_youth_artists"))
 
@@ -418,6 +415,7 @@ def call_for_youth_artists():
                     submission_open=submission_open,
                     submission_status=submission_status,
                     submission_deadline=submission_deadline,
+                    is_admin=is_admin,
                 )
 
             try:
@@ -429,7 +427,6 @@ def call_for_youth_artists():
                 about_yourself = form.about_yourself.data
                 badge_id = form.badge_id.data
                 artwork_file = form.artwork_file.data
-
 
                 if badge_id is None:
                     flash("Please select a valid badge.", "danger")
@@ -466,6 +463,7 @@ def call_for_youth_artists():
 
             except Exception as e:
                 db.session.rollback()
+                logger.error(f"Error during youth artist submission: {e}")
                 flash("An error occurred while processing your submission. Please try again.", "danger")
 
         return render_template(
@@ -475,8 +473,10 @@ def call_for_youth_artists():
             submission_open=submission_open,
             submission_status=submission_status,
             submission_deadline=submission_deadline,
+            is_admin=is_admin,
         )
     except Exception as e:
+        logger.error(f"Critical error in call_for_youth_artists: {e}")
         flash("A critical error occurred. Please contact support.", "danger")
         return redirect(url_for("main.index"))
 

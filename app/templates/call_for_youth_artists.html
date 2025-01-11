@@ -6,22 +6,17 @@
 <p>
     Are you creative and love to draw? Do you care about the environment and want to make a difference? We’re looking for young artists (18 and under) to help design cool badges for Quest by Cycle, a game where people earn points for biking and helping the planet!
 </p>
+
 <h2>Prizes and Recognition</h2>
 <ul>
     <li>Your design featured in the Quest by Cycle game!</li>
     <li>A prize valued at ~$30 (e.g., bike accessories, etc).</li>
 </ul>
+
 <h2>Eligibility</h2>
 <p>
     Anyone between 13 and 18 can apply. No experience is needed—just creativity and excitement!
 </p>
-
-<h2>What You’ll Do</h2>
-<ul>
-    <li>Create fun, colorful designs for badges that people will win in the game.</li>
-    <li>Make digital drawings or hand-drawn art that will be turned into digital badges.</li>
-    <li>Choose from the list of badges <a href="#" onclick="openBadgeModal(); return false;">here</a>.</li>
-</ul>
 
 <h2>How to Apply</h2>
 <p>
@@ -29,18 +24,24 @@
 </p>
 
 {% if not submission_open %}
-<div class="alert alert-warning">
-    Submissions are currently closed. You can review the details, but submissions cannot be submitted at this time.
-</div>
+    <div class="alert {% if is_admin %}alert-info{% else %}alert-warning{% endif %}">
+        {% if is_admin %}
+            Submissions are currently closed for general participants. However, as an admin, you can still submit.
+        {% else %}
+            Submissions are currently closed. You can review the details, but submissions cannot be submitted at this time.
+        {% endif %}
+    </div>
 {% endif %}
 
+<h2>Application</h2>
 <form method="post" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
 
-    {% if not submission_open and not session.get('is_admin', False) %}
+    <!-- Fieldset only disables fields for non-admin users when submissions are closed -->
+    {% if not submission_open and not is_admin %}
         <fieldset disabled>
     {% endif %}
-    
+
     <div class="mb-3">
         {{ form.name.label(class="form-label") }}
         {{ form.name(class="form-control") }}
@@ -90,10 +91,9 @@
         <button type="submit" class="btn btn-success mt-3">Submit Application</button>
     </div>
 
-    {% if not submission_open and not session.get('is_admin', False) %}
+    {% if not submission_open and not is_admin %}
         </fieldset>
     {% endif %}
-
 </form>
 
 <!-- Badge Modal -->
