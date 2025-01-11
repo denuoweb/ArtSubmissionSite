@@ -7,6 +7,7 @@ from app.main import main_bp, get_rank_suffix
 from app.auth import auth_bp
 from app.admin import admin_bp
 from app.utils import custom_url_for  # Import from utils
+from sqlalchemy.exc import ProgrammingError
 
 import os
 import toml
@@ -72,14 +73,17 @@ def create_app():
 
     # Create an admin user if none exists
     with app.app_context():
-        if db.session.query(User).count() == 0:
-            admin_user = User(
-                name="admin",
-                password_hash=generate_password_hash("Questadmin1!"),
-                is_admin=True
-            )
-            db.session.add(admin_user)
-            db.session.commit()
-            app.logger.info("Admin user created with username 'admin' and default password.")
+        try:
+            if db.session.query(User).count() == 0:
+                admin_user = User(
+                    name="admin",
+                    password_hash=generate_password_hash("test"),
+                    is_admin=True
+                )
+                db.session.add(admin_user)
+                db.session.commit()
+                app.logger.info("Admin user created with username 'admin' and default password.")
+        except ProgrammingError as e:
+            app.logger.error("Database schema not initialized. Run 'flask db upgrade' to create the tables.")
 
     return app
