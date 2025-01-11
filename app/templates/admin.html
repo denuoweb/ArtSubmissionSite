@@ -9,21 +9,7 @@
 <p><a href="{{ url_for('admin.judges_results') }}" class="btn btn-sm btn-success earth-btn">View Results</a></p><br>
 <p><a href="{{ url_for('admin.manage_badges') }}" class="btn btn-sm btn-success earth-btn">Manage Badges</a></p><br>
 <p><a href="{{ url_for('admin.manage_judges') }}" class="btn btn-sm btn-success earth-btn">Manage Judges</a></p><br>
-
-<!-- Update Submission Dates Section -->
-<h2>Update Submission Dates</h2>
-<form id="dates_form" method="POST">
-    {{ dates_form.hidden_tag() }}
-    <div class="form-group">
-        {{ dates_form.submission_start.label }}<br>
-        {{ dates_form.submission_start(class="form-control") }}
-    </div>
-    <div class="form-group">
-        {{ dates_form.submission_end.label }}<br>
-        {{ dates_form.submission_end(class="form-control") }}
-    </div>
-    <button type="submit" class="btn btn-primary">Update Dates</button>
-</form>
+<p><a href="{{ url_for('admin.update_submission_dates') }}" class="btn btn-sm btn-success earth-btn">Update Submission Dates</a></p><br>
 
 <!-- Logout Button Section -->
 <h2>Logout</h2>
