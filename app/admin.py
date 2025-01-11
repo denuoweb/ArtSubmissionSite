@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from io import TextIOWrapper
 from sqlalchemy import func
 from functools import wraps
+from zoneinfo import ZoneInfo
 
 import csv
 
@@ -44,36 +45,6 @@ def is_submission_open():
 def admin_page():
     logout_form = LogoutForm()
 
-    submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
-    dates_form = SubmissionDatesForm(
-        submission_start=submission_period.submission_start if submission_period else None,
-        submission_end=submission_period.submission_end if submission_period else None,
-    )
-    if dates_form.validate_on_submit():
-        try:
-            pacific = ZoneInfo("US/Pacific")
-            submission_start = dates_form.submission_start.data.replace(tzinfo=pacific)
-            submission_end = dates_form.submission_end.data.replace(tzinfo=pacific)
-
-            submission_start_utc = submission_start.astimezone(timezone.utc)
-            submission_end_utc = submission_end.astimezone(timezone.utc)
-
-            if submission_period:
-                submission_period.submission_start = submission_start_utc
-                submission_period.submission_end = submission_end_utc
-            else:
-                new_period = SubmissionPeriod(
-                    submission_start=submission_start_utc,
-                    submission_end=submission_end_utc,
-                )
-                db.session.add(new_period)
-
-            db.session.commit()
-            flash("Submission dates updated successfully!", "success")
-        except Exception as e:
-            db.session.rollback()
-            flash("An error occurred while updating submission dates. Please try again.", "danger")
-
     submission_open = is_submission_open()
     submission_status = "Open" if submission_open else "Closed"
     judges = User.query.all()
@@ -82,12 +53,8 @@ def admin_page():
         "admin.html",
         judges=judges,
         submission_status=submission_status,
-        submission_start=submission_period.submission_start if submission_period else None,
-        submission_end=submission_period.submission_end if submission_period else None,
-        dates_form=dates_form,
         logout_form=logout_form
     )
-
 
 
 @admin_bp.route("/manage_judges", methods=["GET", "POST"])
@@ -318,6 +285,60 @@ def judges_results():
         judge_votes_by_youth_submission=judge_votes_by_youth_submission,
         judges_status=judges_status
     )
+
+
+@admin_bp.route("/admin/update-submission-dates", methods=["GET", "POST"])
+@login_required
+@admin_required
+def update_submission_dates():
+    try:
+        submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
+    except Exception as e:
+        current_app.logger.error(f"Error fetching submission period: {e}")
+        flash("Database error: Unable to fetch submission period.", "danger")
+        return redirect(url_for("admin.admin_page"))
+
+    dates_form = SubmissionDatesForm(
+        submission_start=submission_period.submission_start if submission_period else None,
+        submission_end=submission_period.submission_end if submission_period else None,
+    )
+
+    if dates_form.validate_on_submit():
+        try:
+            pacific = ZoneInfo("US/Pacific")
+            submission_start = dates_form.submission_start.data
+            submission_end = dates_form.submission_end.data
+
+            if not submission_start or not submission_end:
+                flash("Both submission start and end dates are required.", "danger")
+                return redirect(url_for("admin.update_submission_dates"))
+
+            submission_start = submission_start.replace(tzinfo=pacific)
+            submission_end = submission_end.replace(tzinfo=pacific)
+
+            submission_start_utc = submission_start.astimezone(timezone.utc)
+            submission_end_utc = submission_end.astimezone(timezone.utc)
+
+            if submission_period:
+                submission_period.submission_start = submission_start_utc
+                submission_period.submission_end = submission_end_utc
+            else:
+                new_period = SubmissionPeriod(
+                    submission_start=submission_start_utc,
+                    submission_end=submission_end_utc,
+                )
+                db.session.add(new_period)
+
+            db.session.commit()
+            flash("Submission dates updated successfully!", "success")
+            return redirect(url_for("admin.update_submission_dates"))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating submission dates: {e}")
+            flash("An error occurred while updating submission dates. Please try again.", "danger")
+
+    return render_template("update_submission_dates.html", dates_form=dates_form)
+
 
 
 @admin_bp.route("/api/artwork-detail/<int:item_id>", methods=["GET"])
