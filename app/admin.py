@@ -5,6 +5,7 @@ from app.models import SubmissionPeriod, User, Badge, db, ArtistSubmission, Badg
 from datetime import datetime, timezone
 from io import TextIOWrapper
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 from functools import wraps
 from zoneinfo import ZoneInfo
 
@@ -188,103 +189,129 @@ def manage_badges():
 
     badges = Badge.query.all()
     return render_template("admin_badges.html", badges=badges)
-
-
 @admin_bp.route("/judges/results", methods=["GET"])
 @login_required
 @admin_required
 def judges_results():
-    results = db.session.query(
-        ArtistSubmission.name.label("artist_name"),
-        Badge.name.label("badge_name"),
-        BadgeArtwork.id.label("badge_artwork_id"),
-        BadgeArtwork.artwork_file.label("artwork_file"),
-        func.sum(JudgeVote.rank).label("total_score")
-    ).join(
-        BadgeArtwork, BadgeArtwork.id == JudgeVote.badge_artwork_id
-    ).join(
-        ArtistSubmission, ArtistSubmission.id == BadgeArtwork.submission_id
-    ).join(
-        Badge, Badge.id == BadgeArtwork.badge_id
-    ).group_by(
-        BadgeArtwork.id, ArtistSubmission.name, Badge.name, BadgeArtwork.artwork_file
-    ).order_by(
-        func.sum(JudgeVote.rank)
-    ).all()
+    current_app.logger.debug("Entered the judges_results route.")
 
-    youth_results = db.session.query(
-        YouthArtistSubmission.name.label("artist_name"),
-        YouthArtistSubmission.age.label("age"),
-        Badge.name.label("badge_name"),
-        YouthArtistSubmission.id.label("youth_artwork_id"),
-        YouthArtistSubmission.artwork_file.label("artwork_file"),
-        func.sum(JudgeVote.rank).label("total_score")
-    ).join(
-        JudgeVote, YouthArtistSubmission.id == JudgeVote.submission_id
-    ).join(
-        Badge, YouthArtistSubmission.badge_id == Badge.id
-    ).group_by(
-        YouthArtistSubmission.id, YouthArtistSubmission.name, YouthArtistSubmission.age, Badge.name, YouthArtistSubmission.artwork_file
-    ).order_by(
-        func.sum(JudgeVote.rank)
-    ).all()
+    try:
+        # Regular results query
+        current_app.logger.debug("Fetching regular results data.")
+        results = db.session.query(
+            ArtistSubmission.name.label("artist_name"),
+            Badge.name.label("badge_name"),
+            BadgeArtwork.id.label("badge_artwork_id"),
+            BadgeArtwork.artwork_file.label("artwork_file"),
+            func.coalesce(func.sum(JudgeVote.rank), 0).label("total_score")
+        ).join(
+            BadgeArtwork, BadgeArtwork.id == JudgeVote.badge_artwork_id, isouter=True
+        ).join(
+            ArtistSubmission, ArtistSubmission.id == BadgeArtwork.submission_id
+        ).join(
+            Badge, Badge.id == BadgeArtwork.badge_id
+        ).group_by(
+            BadgeArtwork.id, ArtistSubmission.name, Badge.name, BadgeArtwork.artwork_file
+        ).order_by(
+            func.coalesce(func.sum(JudgeVote.rank), 0)
+        ).all()
+        current_app.logger.debug(f"Regular results fetched: {results}")
 
-    judge_votes = db.session.query(
-        JudgeVote.badge_artwork_id,
-        User.name.label("judge_name"),
-        JudgeVote.rank
-    ).join(
-        User, User.id == JudgeVote.user_id
-    ).all()
+        # Youth results query
+        current_app.logger.debug("Fetching youth results data.")
+        youth_results = db.session.query(
+            YouthArtistSubmission.name.label("artist_name"),
+            YouthArtistSubmission.age.label("age"),
+            Badge.name.label("badge_name"),
+            YouthArtistSubmission.id.label("youth_artwork_id"),
+            YouthArtistSubmission.artwork_file.label("artwork_file"),
+            func.coalesce(func.sum(JudgeVote.rank), 0).label("total_score")
+        ).join(
+            JudgeVote, YouthArtistSubmission.id == JudgeVote.submission_id, isouter=True
+        ).join(
+            Badge, YouthArtistSubmission.badge_id == Badge.id
+        ).group_by(
+            YouthArtistSubmission.id, YouthArtistSubmission.name, YouthArtistSubmission.age, Badge.name, YouthArtistSubmission.artwork_file
+        ).order_by(
+            func.coalesce(func.sum(JudgeVote.rank), 0)
+        ).all()
+        current_app.logger.debug(f"Youth results fetched: {youth_results}")
 
-    youth_judge_votes = db.session.query(
-        JudgeVote.submission_id.label("youth_submission_id"),
-        User.name.label("judge_name"),
-        JudgeVote.rank
-    ).join(
-        User, User.id == JudgeVote.user_id
-    ).all()
+        # Judge votes mapping
+        current_app.logger.debug("Fetching judge votes.")
+        judge_votes = db.session.query(
+            JudgeVote.badge_artwork_id,
+            User.name.label("judge_name"),
+            JudgeVote.rank
+        ).join(
+            User, User.id == JudgeVote.user_id
+        ).all()
+        current_app.logger.debug(f"Judge votes fetched: {judge_votes}")
 
-    judge_votes_by_artwork = {}
-    for vote in judge_votes:
-        artwork_id = vote.badge_artwork_id
-        if artwork_id not in judge_votes_by_artwork:
-            judge_votes_by_artwork[artwork_id] = []
-        judge_votes_by_artwork[artwork_id].append({
-            "judge_name": vote.judge_name,
-            "rank": vote.rank
-        })
+        youth_judge_votes = db.session.query(
+            JudgeVote.submission_id.label("youth_submission_id"),
+            User.name.label("judge_name"),
+            JudgeVote.rank
+        ).join(
+            User, User.id == JudgeVote.user_id
+        ).all()
+        current_app.logger.debug(f"Youth judge votes fetched: {youth_judge_votes}")
 
-    judge_votes_by_youth_submission = {}
-    for vote in youth_judge_votes:
-        submission_id = vote.youth_submission_id
-        if submission_id not in judge_votes_by_youth_submission:
-            judge_votes_by_youth_submission[submission_id] = []
-        judge_votes_by_youth_submission[submission_id].append({
-            "judge_name": vote.judge_name,
-            "rank": vote.rank
-        })
+        # Processing judge votes
+        current_app.logger.debug("Processing judge votes into dictionaries.")
+        judge_votes_by_artwork = {}
+        for vote in judge_votes:
+            artwork_id = vote.badge_artwork_id
+            if artwork_id not in judge_votes_by_artwork:
+                judge_votes_by_artwork[artwork_id] = []
+            judge_votes_by_artwork[artwork_id].append({
+                "judge_name": vote.judge_name,
+                "rank": vote.rank
+            })
+        current_app.logger.debug(f"Judge votes by artwork: {judge_votes_by_artwork}")
 
-    voted_judges_ids = db.session.query(JudgeVote.user_id).distinct().all()
-    voted_judges_ids = [user_id[0] for user_id in voted_judges_ids]
+        judge_votes_by_youth_submission = {}
+        for vote in youth_judge_votes:
+            submission_id = vote.youth_submission_id
+            if submission_id not in judge_votes_by_youth_submission:
+                judge_votes_by_youth_submission[submission_id] = []
+            judge_votes_by_youth_submission[submission_id].append({
+                "judge_name": vote.judge_name,
+                "rank": vote.rank
+            })
+        current_app.logger.debug(f"Judge votes by youth submission: {judge_votes_by_youth_submission}")
 
-    voted_judges = db.session.query(User.name).filter(User.id.in_(voted_judges_ids)).all()
-    voted_judges = [judge[0] for judge in voted_judges]
+        # Judges voting status
+        current_app.logger.debug("Calculating judges voting status.")
+        voted_judges = db.session.query(User.name).join(JudgeVote).distinct().all()
+        voted_judges = [judge[0] for judge in voted_judges]
+        current_app.logger.debug(f"Voted judges: {voted_judges}")
 
-    all_judges = db.session.query(User).all()
-    judges_status = {
-        "voted": voted_judges,
-        "not_voted": [judge.name for judge in all_judges if judge.name not in voted_judges],
-    }
+        all_judges = db.session.query(User.name).all()
+        all_judge_names = [judge[0] for judge in all_judges]
+        current_app.logger.debug(f"All judges: {all_judge_names}")
 
-    return render_template(
-        "judges_results.html",
-        results=results,
-        youth_results=youth_results,
-        judge_votes_by_artwork=judge_votes_by_artwork,
-        judge_votes_by_youth_submission=judge_votes_by_youth_submission,
-        judges_status=judges_status
-    )
+        judges_status = {
+            "voted": voted_judges,
+            "not_voted": [name for name in all_judge_names if name not in voted_judges],
+        }
+        current_app.logger.debug(f"Judges status calculated: {judges_status}")
+
+        # Rendering the results template
+        current_app.logger.debug("Rendering results page template.")
+        return render_template(
+            "judges_results.html",
+            results=results,
+            youth_results=youth_results,
+            judge_votes_by_artwork=judge_votes_by_artwork,
+            judge_votes_by_youth_submission=judge_votes_by_youth_submission,
+            judges_status=judges_status
+        )
+
+    except Exception as e:
+        current_app.logger.error(f"Error in judges_results route: {e}", exc_info=True)
+        return render_template("error.html", error="An error occurred while loading the results page."), 500
+
 
 
 @admin_bp.route("/admin/update-submission-dates", methods=["GET", "POST"])

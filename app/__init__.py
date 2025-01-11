@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager, user_logged_in, user_logged_out, user_loaded_from_request, current_user
 from flask_wtf.csrf import CSRFProtect, CSRFError
-from app.main import main_bp
+from app.main import main_bp, get_rank_suffix
 from app.auth import auth_bp
 from app.admin import admin_bp
 
@@ -58,7 +58,10 @@ def create_app():
             response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
             response.headers['Pragma'] = 'no-cache'
         return response
-        
+
+
+    app.jinja_env.globals['get_rank_suffix'] = get_rank_suffix
+
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
     return app

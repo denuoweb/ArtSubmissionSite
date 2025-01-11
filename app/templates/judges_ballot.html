@@ -36,13 +36,21 @@
             {{ rank_form.hidden_tag() }}
             <input type="hidden" id="rank-input" name="rank">
             <input type="hidden" name="form_name" value="ranking_form">
-            <div id="rankings-list" class="sortable-list">
+        
+            <div id="rankings-list" class="sortable-list grid-layout">
                 {% for submission in artist_submissions %}
                 <div class="rank-item" data-id="{{ submission.id }}">
-                    <span class="rank-position"></span> {{ submission.name }}
+                    <span class="rank-number">{{ loop.index }}{{ get_rank_suffix(loop.index) }}</span>
+                    <img 
+                        src="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}" 
+                        alt="Artwork for {{ submission.name }}" 
+                        class="artwork-thumbnail"
+                    />
                 </div>
                 {% endfor %}
             </div>
+        
+            <button type="button" class="btn btn-secondary mt-3" onclick="previewRankings()">Preview Rankings</button>
             <button type="submit" class="btn btn-primary mt-3">Submit Rankings</button>
         </form>
     </div>
@@ -56,7 +64,16 @@
             <div id="youth-rankings-list" class="sortable-list">
                 {% for submission in youth_submissions %}
                 <div class="rank-item" data-id="{{ submission.id }}">
-                    <span class="rank-position"></span> {{ submission.name }}
+                    <!-- Updated image element with necessary attributes -->
+                    <span class="rank-position"></span> 
+                    <img 
+                        src="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}" 
+                        alt="Artwork for {{ submission.name }}" 
+                        class="artwork-thumbnail" 
+                        data-artwork-url="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}" 
+                        data-name="{{ submission.name }}" 
+                        data-id="{{ submission.id }}" 
+                    />
                 </div>
                 {% endfor %}
             </div>
@@ -93,6 +110,7 @@
         </div>
     </div>
 </div>
+
 
 {% endblock %}
 

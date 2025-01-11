@@ -6,7 +6,6 @@ from app.admin import is_submission_open
 from app.models import ArtistSubmission, YouthArtistSubmission, User, JudgeVote, Badge, BadgeArtwork, SubmissionPeriod, db
 from app.forms import ArtistSubmissionForm, RankingForm, YouthArtistSubmissionForm, LogoutForm
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy.orm import joinedload
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from urllib.parse import urlparse
@@ -45,53 +44,99 @@ def index():
     )
 
 
+def get_rank_suffix(rank):
+    """Return the appropriate suffix for a given rank."""
+    if rank % 100 in (11, 12, 13):  # Special case for 11th, 12th, 13th
+        return "th"
+    if rank % 10 == 1:
+        return "st"
+    if rank % 10 == 2:
+        return "nd"
+    if rank % 10 == 3:
+        return "rd"
+    return "th"
+
+
+def save_rankings_for_user(user_id, ranked_ids):
+    rank = 1
+    with db.session.begin_nested():
+        db.session.query(JudgeVote).filter_by(user_id=user_id).delete()
+        for submission_id in ranked_ids:
+            badge_artwork = db.session.query(BadgeArtwork).filter_by(submission_id=submission_id).first()
+            if not badge_artwork:
+                raise ValueError(f"No BadgeArtwork found for submission ID: {submission_id}")
+            vote = JudgeVote(
+                user_id=user_id,
+                submission_id=submission_id,
+                rank=rank,
+                badge_artwork_id=badge_artwork.id
+            )
+            db.session.add(vote)
+            rank += 1
+    db.session.commit()
+
+
 @main_bp.route("/judges/ballot", methods=["GET", "POST"])
 @login_required
 def judges_ballot():
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+
     if not current_user.is_authenticated:
+        logger.warning("Unauthorized access attempt.")
         flash("Unauthorized access. Privileges required.", "danger")
         return redirect(url_for("main.index"))
 
+    logger.info(f"User {current_user.id} ({current_user.name}) accessed judges ballot.")
+
     logout_form = LogoutForm()
     rank_form = RankingForm()
-
-    if request.method == "POST" and rank_form.validate_on_submit():
-        form_name = request.form.get("form_name")
-
-        if form_name == "ranking_form":
-            ranked_votes = request.form.get("rank", "")
-            if ranked_votes:
-                ranked_votes = ranked_votes.split(",")
-                rank = 1
-                try:
-                    with db.session.begin_nested():
-                        JudgeVote.query.filter_by(user_id=current_user.id).delete()
-
-                        for submission_id in ranked_votes:
-                            badge_artwork = BadgeArtwork.query.filter_by(submission_id=submission_id).first()
-                            if not badge_artwork:
-                                flash(f"No BadgeArtwork found for submission ID {submission_id}.", "danger")
-                                return redirect(url_for("main.judges_ballot"))
-
-                            vote = JudgeVote(
-                                user_id=current_user.id,
-                                submission_id=int(submission_id),
-                                rank=rank,
-                                badge_artwork_id=badge_artwork.id
-                            )
-                            db.session.add(vote)
-                            rank += 1
-
-                    db.session.commit()
-                    flash("Rankings submitted successfully!", "success")
-                except Exception as e:
-                    db.session.rollback()
-                    flash("An error occurred while saving rankings. Please try again.", "danger")
-                return redirect(url_for("main.judges_submission_success"))
-
-    # Retrieve submissions as in your original code
     user_id = current_user.id
 
+    prepared_artist_submissions = []
+    prepared_youth_submissions = []
+
+    if request.method == "POST":
+        logger.debug("Received POST request.")
+        if rank_form.validate_on_submit():
+            logger.debug("Form validation successful.")
+            form_name = request.form.get("form_name")
+            rank_data = request.form.get("rank")
+
+            logger.debug(f"Form name received: {form_name}")
+            logger.debug(f"Ranked votes received: {rank_data}")
+
+            if not rank_data:
+                logger.warning("No ranked votes received in the request.")
+                flash("No ranked votes were provided.", "danger")
+                return jsonify({"error": "No rankings submitted"}), 400
+
+            try:
+                # Parse rankings and handle them
+                ranked_ids = rank_data.split(",")
+                logger.debug(f"Parsed ranked IDs: {ranked_ids}")
+
+                # Save rankings to the database for the current user
+                save_rankings_for_user(user_id, ranked_ids)
+
+                flash("Rankings submitted successfully!", "success")
+                return jsonify({"success": True}), 200
+            except Exception as e:
+                logger.error("An error occurred during the transaction.", exc_info=True)
+                flash("An error occurred while saving rankings. Please try again.", "danger")
+                return jsonify({"error": "An error occurred"}), 500
+        else:
+            logger.warning("Form validation failed.")
+            flash("Form validation failed. Please try again.", "danger")
+
+    # Retrieve saved votes
+    logger.debug(f"Retrieving saved votes for user_id: {user_id}")
+    saved_votes = db.session.query(JudgeVote).filter_by(user_id=user_id).order_by(JudgeVote.rank).all()
+    logger.debug(f"Saved votes retrieved: {saved_votes}")
+    ranked_submission_ids = [vote.submission_id for vote in saved_votes]
+
+    # Retrieve artist submissions
+    logger.debug("Retrieving artist submissions.")
     artist_submissions = db.session.query(
         ArtistSubmission.id,
         ArtistSubmission.name,
@@ -107,7 +152,35 @@ def judges_ballot():
     ).join(
         Badge, BadgeArtwork.badge_id == Badge.id
     ).distinct().all()
+    logger.debug(f"Artist submissions retrieved: {len(artist_submissions)}")
 
+    # Prepare artist submissions
+    if saved_votes:
+        logger.debug("Sorting submissions based on saved votes.")
+        ranked_submissions = [
+            submission for submission in artist_submissions if submission.id in ranked_submission_ids
+        ]
+        ranked_submissions.sort(key=lambda s: ranked_submission_ids.index(s.id))
+        unranked_submissions = [
+            submission for submission in artist_submissions if submission.id not in ranked_submission_ids
+        ]
+        prepared_artist_submissions = ranked_submissions + unranked_submissions
+    else:
+        logger.debug("No saved votes. Preparing random order for submissions.")
+        if "random_artist_order" not in session:
+            random_order = [submission.id for submission in artist_submissions]
+            import random
+            random.shuffle(random_order)
+            session["random_artist_order"] = random_order
+        else:
+            random_order = session["random_artist_order"]
+
+        prepared_artist_submissions = sorted(
+            artist_submissions, key=lambda s: random_order.index(s.id)
+        )
+
+    # Retrieve youth submissions
+    logger.debug("Retrieving youth submissions.")
     youth_submissions = db.session.query(
         YouthArtistSubmission.id,
         YouthArtistSubmission.name,
@@ -121,31 +194,14 @@ def judges_ballot():
     ).join(
         Badge, YouthArtistSubmission.badge_id == Badge.id
     ).distinct().all()
-
-    # Retrieve saved votes
-    saved_votes = db.session.query(JudgeVote).filter_by(user_id=user_id).order_by(JudgeVote.rank).all()
-    ranked_submission_ids = [vote.submission_id for vote in saved_votes]
-
-    # Prepare submissions (ranked and unranked)
-    if saved_votes:
-        ranked_submissions = [
-            submission for submission in artist_submissions if submission.id in ranked_submission_ids
-        ]
-        ranked_submissions.sort(key=lambda s: ranked_submission_ids.index(s.id))
-        unranked_submissions = [
-            submission for submission in artist_submissions if submission.id not in ranked_submission_ids
-        ]
-        prepared_artist_submissions = ranked_submissions + unranked_submissions
-    else:
-        import random
-        random.shuffle(artist_submissions)
-        prepared_artist_submissions = artist_submissions
+    logger.debug(f"Youth submissions retrieved: {len(youth_submissions)}")
 
     # Prepare youth submissions
     saved_youth_votes = db.session.query(JudgeVote).filter_by(user_id=user_id).order_by(JudgeVote.rank).all()
     ranked_youth_submission_ids = [vote.submission_id for vote in saved_youth_votes]
 
     if saved_youth_votes:
+        logger.debug("Sorting youth submissions based on saved votes.")
         ranked_youth_submissions = [
             submission for submission in youth_submissions if submission.id in ranked_youth_submission_ids
         ]
@@ -155,9 +211,20 @@ def judges_ballot():
         ]
         prepared_youth_submissions = ranked_youth_submissions + unranked_youth_submissions
     else:
-        random.shuffle(youth_submissions)
-        prepared_youth_submissions = youth_submissions
+        logger.debug("No saved votes for youth submissions. Preparing random order.")
+        if "random_youth_order" not in session:
+            random_youth_order = [submission.id for submission in youth_submissions]
+            import random
+            random.shuffle(random_youth_order)
+            session["random_youth_order"] = random_youth_order
+        else:
+            random_youth_order = session["random_youth_order"]
 
+        prepared_youth_submissions = sorted(
+            youth_submissions, key=lambda s: random_youth_order.index(s.id)
+        )
+
+    logger.debug("Rendering judges ballot template.")
     return render_template(
         "judges_ballot.html",
         artist_submissions=prepared_artist_submissions,
@@ -165,6 +232,7 @@ def judges_ballot():
         rank_form=rank_form,
         logout_form=logout_form
     )
+
 
 
 @main_bp.route("/call_for_artists", methods=["GET", "POST"])
