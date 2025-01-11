@@ -22,11 +22,11 @@ def admin_required(func):
         if not current_user.is_authenticated:
             # Redirect to the login page if the user is not authenticated
             flash("Please log in to access this page.", "warning")
-            return redirect(url_for("auth.judges_login"))
+            return redirect(url_for("auth.judges"))
         if not current_user.is_admin:
             # Redirect to a non-privileged page if the user is not an admin
             flash("Unauthorized access. Admin privileges required.", "danger")
-            return redirect(url_for("auth.judges_login"))
+            return redirect(url_for("auth.judges"))
         # If authenticated and admin, allow access to the view
         return func(*args, **kwargs)
     return decorated_view

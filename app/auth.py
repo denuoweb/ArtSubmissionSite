@@ -23,7 +23,7 @@ def login_judge(name, password, remember=False):
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
-def judges_login():
+def judges():
     current_app.logger.debug(f"User logged in: {current_user}")
 
     if current_user.is_authenticated:
@@ -48,7 +48,7 @@ def judges_login():
     elif form.is_submitted():
         flash("Invalid form submission.", "danger")
 
-    return render_template("judges_login.html", form=form)
+    return render_template("judges.html", form=form)
 
 
 

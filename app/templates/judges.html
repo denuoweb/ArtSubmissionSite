@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center min-vh-100">
+    <div class="card shadow-lg p-4" style="max-width: 400px; width: 100%;">
+        <h2 class="text-center mb-4">Judge Login</h2>
+
+        {% if current_user.is_authenticated %}
+            <div class="alert alert-success text-center">
+                <p>You are already logged in as <strong>{{ current_user.name }}</strong>.</p>
+                <a href="{{ url_for('admin.admin_page' if current_user.is_admin else 'main.judges_ballot') }}" 
+                   class="btn btn-primary btn-block mt-3">Go to Dashboard</a>
+            </div>
+        {% else %}
+            <p class="text-center">Please enter your credentials to log in:</p>
+            <form method="POST" action="{{ url_for('auth.judges') }}" class="needs-validation" novalidate>
+                {{ form.hidden_tag() }}
+                
+                <!-- Username -->
+                <div class="mb-3">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-control", placeholder="Enter your username") }}
+                    {% if form.name.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.name.errors[0] }}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Password -->
+                <div class="mb-3">
+                    {{ form.password.label(class="form-label") }}
+                    {{ form.password(class="form-control", placeholder="Enter your password") }}
+                    {% if form.password.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.password.errors[0] }}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Remember Me -->
+                {% if form.remember_me %}
+                <div class="form-check mb-3">
+                    {{ form.remember_me(class="form-check-input", id="rememberMe") }}
+                    <label for="rememberMe" class="form-check-label">
+                        {{ form.remember_me.label.text }}
+                    </label>
+                </div>
+                {% endif %}
+                
+                <!-- Submit Button -->
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button>
+                </div>
+            </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

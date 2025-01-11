@@ -31,8 +31,8 @@
                 <li class="{% if request.endpoint == 'main.call_for_youth_artists' %}active{% endif %}">
                     <a href="{{ url_for('main.call_for_youth_artists') }}">Youth Artists</a>
                 </li>
-                <li class="{% if request.endpoint == 'auth.judges_login' %}active{% endif %}">
-                    <a href="{{ url_for('auth.judges_login') }}">Judges</a>
+                <li class="{% if request.endpoint == 'auth.judges' %}active{% endif %}">
+                    <a href="{{ url_for('auth.judges') }}">Judges</a>
                 </li>
             </ul>
         </nav>

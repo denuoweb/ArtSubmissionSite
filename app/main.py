@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, render_template, request, redirect, flash, session, abort, make_response, current_app
 from flask_wtf.csrf import generate_csrf
 from flask_login import login_required, current_user
-from app.auth import judges_login
+from app.auth import judges
 from app.admin import is_submission_open
 from app.models import ArtistSubmission, YouthArtistSubmission, User, JudgeVote, Badge, BadgeArtwork, SubmissionPeriod, db
 from app.forms import ArtistSubmissionForm, RankingForm, YouthArtistSubmissionForm, LogoutForm
