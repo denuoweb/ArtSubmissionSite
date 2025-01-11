@@ -3,15 +3,16 @@
 
 <h1>Ballot</h1>
 
-<a href="{{ url_for('main.admin_page') }}" class="btn btn-secondary">Back to Admin Dashboard</a>
+{% if current_user.is_admin %}
+    <a href="{{ url_for('admin.admin_page') }}" class="btn btn-secondary">Back to Admin Dashboard</a>
+{% endif %}
 
 <!-- Logout Button Section -->
 <h2>Logout</h2>
-<form method="POST" action="{{ url_for('main.judges_ballot') }}">
-    {{ logout_form.hidden_tag() }}
+<form method="POST" action="{{ url_for('auth.logout') }}">
+    {{ logout_form.csrf_token() }}
     <button type="submit" class="btn btn-danger">Logout</button>
 </form>
-
 
 <!-- Tabs Navigation -->
 <ul class="nav nav-tabs" id="ballotTabs" role="tablist">
@@ -34,7 +35,7 @@
             id="youth-tab" 
             data-bs-toggle="tab" 
             data-bs-target="#youth-submissions" 
-            type="button" 
+            type="button"
             role="tab" 
             aria-controls="youth-submissions" 
             aria-selected="false">
@@ -47,85 +48,12 @@
 <div class="tab-content mt-3" id="ballotTabsContent">
     <!-- General Submissions Tab -->
     <div class="tab-pane show active" id="current-submissions" role="tabpanel" aria-labelledby="current-tab">
-        <form method="POST" id="ranking-form" class="d-flex flex-column">
-            {{ form.csrf_token }}
-
-            <!-- Submit Rankings -->
-            <input type="hidden" name="rank" id="rank-input">
-            <button type="submit" class="btn btn-success"><strong>Submit Rankings</strong></button>
-            
-            <div id="rankings-list" class="d-flex flex-wrap gap-3 mt-3">
-                {% for submission in artist_submissions %}
-                <div 
-                    data-id="{{ submission.id }}" 
-                    class="rank-item card text-center p-3"
-                    style="width: 18rem; cursor: grab; box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);">
-                    <div class="submission-info">
-                        <h5 class="rank-position text-primary fw-bold" style="margin-bottom: 1rem;">
-                            {{ loop.index }} Place
-                        </h5>
-                        <img 
-                            class="artwork-thumbnail"
-                            src="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}"
-                            data-artwork-url="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}"
-                            data-id="{{ submission.id }}"
-                            data-name="{{ submission.name }}"
-                            alt="Artwork Thumbnail"
-                        >
-                        <div class="card-body">
-                            <p class="card-text"><strong>Name:</strong> {{ submission.name }}</p>
-                            <p class="card-text"><strong>Badge:</strong> {{ submission.badge_name }}</p>
-                        </div>
-                    </div>
-                    
-                    <!-- Delete Button (Visible for Admins Only) -->
-                    {% if session.get('is_admin') %}
-                    <button 
-                        type="button" 
-                        class="btn btn-danger btn-sm mt-2 delete-button"
-                        data-id="{{ submission.id }}">
-                        Delete
-                    </button>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
-        </form>
+        
     </div>
 
     <!-- Youth Submissions Tab -->
     <div class="tab-pane" id="youth-submissions" role="tabpanel" aria-labelledby="youth-tab">
-        <form method="POST" id="youth-ranking-form" class="d-flex flex-column">
-            {{ form.csrf_token }}
-
-            <!-- Submit Youth Rankings -->
-            <input type="hidden" name="youth_rank" id="youth-rank-input">
-            <button type="submit" class="btn btn-success"><strong>Submit Youth Rankings</strong></button>
-
-            <div id="youth-rankings-list" class="d-flex flex-wrap gap-3 mt-3">
-                {% for submission in youth_submissions %}
-                <div 
-                    data-id="{{ submission.id }}" 
-                    class="rank-item card text-center p-3"
-                    style="width: 18rem; cursor: grab; box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);">
-                    <div class="submission-info">
-                        <h5 class="rank-position text-primary fw-bold" style="margin-bottom: 1rem;">
-                            {{ loop.index }} Place
-                        </h5>
-                        <img 
-                            class="artwork-thumbnail"
-                            src="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}"
-                            alt="Artwork Thumbnail">
-                        <div class="card-body">
-                            <p class="card-text"><strong>Name:</strong> {{ submission.name }}</p>
-                            <p class="card-text"><strong>Badge:</strong> {{ submission.badge_name }}</p>
-                            <p class="card-text"><strong>Age:</strong> {{ submission.age }}</p>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </form>
+        
     </div>
 </div>
 <!-- Artwork Modal -->
@@ -161,7 +89,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/rankings.js') }}"></script>
 <script src="{{ url_for('static', filename='js/delete_submission.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <script src="{{ url_for('static', filename='js/artwork_modal.js') }}"></script>

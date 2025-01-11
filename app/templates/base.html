@@ -9,9 +9,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="preload" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}"></noscript>
-    
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
-
+    <script>const basePath = "{{ application_root }}";</script>
 </head>
 <body data-base-path="{{ config['APPLICATION_ROOT'] | default('') }}">
     <div class="container">
@@ -20,8 +19,8 @@
             <ul>
                 <li><a href="{{ url_for('main.index') }}">Home</a></li>
                 <li><a href="{{ url_for('main.call_for_artists') }}">Call for Artists</a></li>
-                <li><a href="{{ url_for('main.call_to_youth_artists') }}">Youth Artists</a></li>
-                <li><a href="{{ url_for('main.judges_password') }}">Judges</a></li>
+                <li><a href="{{ url_for('main.call_for_youth_artists') }}">Youth Artists</a></li>
+                <li><a href="{{ url_for('auth.judges_login') }}">Judges</a></li>
             </ul>
         </nav>
         

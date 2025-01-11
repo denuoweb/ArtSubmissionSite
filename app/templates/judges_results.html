@@ -3,10 +3,10 @@
 {% block content %}
 <h1>Judges Results</h1>
 
-<a href="{{ url_for('main.admin_page') }}" class="btn btn-secondary">Back to Admin Dashboard</a>
+<a href="{{ url_for('admin.admin_page') }}" class="btn btn-secondary">Back to Admin Dashboard</a>
 <p>
     <button id="clearVotesButton" class="btn btn-danger mt-3" 
-            data-clear-votes-url="{{ url_for('main.clear_votes') }}">
+            data-clear-votes-url="{{ url_for('admin.clear_votes') }}">
         Clear All Votes
     </button>
 </p>
@@ -57,7 +57,7 @@
                     <th>Badge Name</th>
                     <th>Artwork</th>
                     <th>Score (Lower is Better)</th>
-                    <th>Judge Votes</th>
+                    <th>User Votes</th>
                 </tr>
             </thead>
             <tbody>
@@ -104,7 +104,7 @@
                     <th>Badge Name</th>
                     <th>Artwork</th>
                     <th>Score (Lower is Better)</th>
-                    <th>Judge Votes</th>
+                    <th>User Votes</th>
                 </tr>
             </thead>
             <tbody>
@@ -141,7 +141,7 @@
 </div>
 
 <!-- Voting Status -->
-<h2>Judge Voting Status</h2>
+<h2>User Voting Status</h2>
 <div id="votingStatus" class="row">
     <div class="col-md-6">
         <h3>Judges Who Voted</h3>

@@ -71,15 +71,15 @@ class BadgeArtwork(db.Model):
     def __repr__(self):
         return f"<BadgeArtwork Badge={self.badge.name}, File={self.artwork_file}>"
 
-# Judge model for user authentication and voting
-class Judge(db.Model, UserMixin):
+# User model for user authentication and voting
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
 
     # Relationship to JudgeVote
-    votes = db.relationship('JudgeVote', backref='judge', cascade='all, delete-orphan')
+    votes = db.relationship('JudgeVote', backref='user', cascade='all, delete-orphan')
 
     def set_password(self, password):
         """Hash and set the password for the judge."""
@@ -90,17 +90,17 @@ class Judge(db.Model, UserMixin):
         return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
-        return f"<Judge name={self.name}, is_admin={self.is_admin}>"
+        return f"<User name={self.name}, is_admin={self.is_admin}>"
 
 
-# Judge vote model representing votes cast by judges
+# User vote model representing votes cast by judges
 class JudgeVote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    judge_id = db.Column(db.Integer, db.ForeignKey('judge.id'), nullable=False)  # Reference to Judge
-    submission_id = db.Column(db.Integer, db.ForeignKey('artist_submission.id'), nullable=True)  # Optional reference to ArtistSubmission
-    youth_submission_id = db.Column(db.Integer, db.ForeignKey('youth_artist_submission.id'), nullable=True)  # Optional reference to YouthArtistSubmission
-    badge_artwork_id = db.Column(db.Integer, db.ForeignKey('badge_artwork.id'), nullable=False)  # Reference to BadgeArtwork
-    rank = db.Column(db.Integer, nullable=False)  # Rank given by the judge
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Make sure it references 'user.id'
+    submission_id = db.Column(db.Integer, db.ForeignKey('artist_submission.id'), nullable=True)
+    youth_submission_id = db.Column(db.Integer, db.ForeignKey('youth_artist_submission.id'), nullable=True)
+    badge_artwork_id = db.Column(db.Integer, db.ForeignKey('badge_artwork.id'), nullable=False)
+    rank = db.Column(db.Integer, nullable=False)
 
     def __repr__(self):
         if self.submission_id:

@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Judge Login</h1>
+<h1>User Login</h1>
 
 {% if current_user.is_authenticated %}
-    <p>You are already logged in.</p>
+    <p>You are logged in as {{ current_user.name }}.</p>
 {% else %}
     <p>Enter your credentials to log in:</p>
-    <form method="POST" action="{{ url_for('main.judges_password') }}">
-        {{ form.csrf_token }}
+    <form method="POST" action="{{ url_for('auth.judges_login') }}">
+        {{ form.hidden_tag() }}
         <div>
             {{ form.name.label }} {{ form.name }}
         </div>
@@ -19,5 +19,4 @@
         </div>
     </form>
 {% endif %}
-
 {% endblock %}
