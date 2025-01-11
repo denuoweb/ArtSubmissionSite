@@ -6,6 +6,7 @@ from flask_wtf.csrf import CSRFProtect, CSRFError
 from app.main import main_bp, get_rank_suffix
 from app.auth import auth_bp
 from app.admin import admin_bp
+from app.utils import custom_url_for  # Import from utils
 
 import os
 import toml
@@ -59,6 +60,12 @@ def create_app():
             response.headers['Pragma'] = 'no-cache'
         return response
 
+
+    # Assign the custom_url_for to Jinja's global context
+    app.jinja_env.globals['url_for'] = custom_url_for
+
+    # Make custom_url_for available for import
+    app.custom_url_for = custom_url_for
 
     app.jinja_env.globals['get_rank_suffix'] = get_rank_suffix
 
