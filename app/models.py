@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from datetime import datetime
 from flask import url_for, current_app
+from sqlalchemy.orm import relationship, backref
 
 db = SQLAlchemy()
 
@@ -11,8 +12,6 @@ class Badge(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)  # Unique badge name
     description = db.Column(db.Text, nullable=False)  # Description of the badge
-
-    # One-to-many relationship with BadgeArtwork
     badge_artworks = db.relationship('BadgeArtwork', backref='badge', cascade='all, delete-orphan')
 
     def __repr__(self):
@@ -33,10 +32,8 @@ class ArtistSubmission(db.Model):
     future_engagement = db.Column(db.Text, nullable=True)  # Interest in future engagement
     consent_to_data = db.Column(db.Boolean, nullable=False, default=False)  # Consent to data usage
     opt_in_featured_artwork = db.Column(db.Boolean, nullable=False, default=False)  # Opt-in for featuring artwork
-
-    # One-to-many relationships
     badge_artworks = db.relationship('BadgeArtwork', backref='submission', cascade='all, delete-orphan')
-    judge_votes = db.relationship('JudgeVote', backref='submission', cascade='all, delete-orphan')
+    judge_votes = db.relationship('JudgeVote', backref='artist_submission', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f"<ArtistSubmission name={self.name}, email={self.email}>"
@@ -54,6 +51,8 @@ class YouthArtistSubmission(db.Model):
     artwork_file = db.Column(db.String(255), nullable=False)  # File path for the artwork
 
     badge = db.relationship("Badge", backref="youth_submissions")
+    judge_votes = db.relationship('JudgeVote', backref='youth_submission', cascade='all, delete-orphan')
+
 
     def __repr__(self):
         return f"<YouthArtistSubmission name={self.name}, email={self.email}>"
@@ -61,15 +60,17 @@ class YouthArtistSubmission(db.Model):
 # Badge artwork model representing artwork submissions tied to a badge
 class BadgeArtwork(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    submission_id = db.Column(db.Integer, db.ForeignKey('artist_submission.id'), nullable=False)
-    badge_id = db.Column(db.Integer, db.ForeignKey('badge.id'), nullable=False)
+    submission_id = db.Column(db.Integer, db.ForeignKey('artist_submission.id', ondelete='CASCADE'), nullable=False)
+    badge_id = db.Column(db.Integer, db.ForeignKey('badge.id', ondelete='CASCADE'), nullable=False)
     artwork_file = db.Column(db.String(255), nullable=False)  # File path for the artwork
-
+    __table_args__ = (db.UniqueConstraint('submission_id', 'badge_id', name='unique_submission_badge'),)
+    
     # One-to-many relationship with JudgeVote
     judge_votes = db.relationship('JudgeVote', backref='badge_artwork', cascade='all, delete-orphan')
 
     def __repr__(self):
-        return f"<BadgeArtwork Badge={self.badge.name}, File={self.artwork_file}>"
+        badge_name = self.badge.name if self.badge else "None"
+        return f"<BadgeArtwork Badge={badge_name}, File={self.artwork_file}>"
 
 # User model for user authentication and voting
 class User(db.Model, UserMixin):

@@ -13,6 +13,10 @@ from urllib.parse import urlparse
 
 import os
 import uuid
+import logging
+import traceback
+
+logger = logging.getLogger(__name__)
 
 main_bp = Blueprint('main', __name__)
 
@@ -165,131 +169,137 @@ def judges_ballot():
 
 @main_bp.route("/call_for_artists", methods=["GET", "POST"])
 def call_for_artists():
-    application_root = current_app.config["APPLICATION_ROOT"]
-    
+    application_root = current_app.config.get("APPLICATION_ROOT", "/")
+    logger.debug("Accessing 'call_for_artists' route.")
+
     submission_open = is_submission_open()
-    is_admin = getattr(current_user, 'is_admin', False)  # Check if current_user has 'is_admin', default to False
+    logger.debug(f"Submission open status: {submission_open}")
+
+    is_admin = getattr(current_user, 'is_admin', False)
+    logger.debug(f"Current user admin status: {is_admin}")
+
     submission_status = "Open" if submission_open else "Closed"
-    
+    logger.debug(f"Submission status: {submission_status}")
+
     submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
-    submission_deadline = submission_period.submission_end.strftime("%B %d, %Y at %I:%M %p %Z") if submission_period else "N/A"
+    if submission_period:
+        logger.debug(f"Submission period found: {submission_period}")
+        submission_deadline = submission_period.submission_end.strftime("%B %d, %Y at %I:%M %p %Z")
+    else:
+        logger.warning("No submission period found in database.")
+        submission_deadline = "N/A"
 
     form = ArtistSubmissionForm()
+    logger.debug("ArtistSubmissionForm initialized.")
 
     badges = Badge.query.all()
-    badge_choices = [(badge.id, f"{badge.name}: {badge.description}") for badge in badges]
+    logger.debug(f"Retrieved {len(badges)} badges from the database.")
 
-    for badge_upload in form.badge_uploads:
+    badge_choices = [(badge.id, f"{badge.name}: {badge.description}") for badge in badges]
+    for badge_upload in form.badge_uploads.entries:
         badge_upload.badge_id.choices = badge_choices
+    logger.debug("Badge choices populated in form.")
 
     previous_badge_data = []
 
     if request.method == "POST":
+        logger.debug("POST request received.")
         if not submission_open and not is_admin:
+            logger.warning("Submission attempt while submissions are closed.")
             flash("Submissions are currently closed. You cannot submit at this time.", "danger")
             return redirect(url_for("main.call_for_artists"))
 
-        for badge_upload in form.badge_uploads.entries:
-            badge_id = badge_upload.badge_id.data
-            artwork_file = badge_upload.artwork_file.data
+        try:
+            for badge_upload in form.badge_uploads.entries:
+                badge_id = badge_upload.badge_id.data
+                artwork_file = badge_upload.artwork_file.data
 
-            if hasattr(artwork_file, "filename"):
-                filename = artwork_file.filename
-            else:
-                filename = artwork_file
+                filename = artwork_file.filename if hasattr(artwork_file, "filename") else artwork_file
+                previous_badge_data.append({"badge_id": badge_id, "artwork_file": filename})
+            logger.debug(f"Previous badge data: {previous_badge_data}")
 
-            previous_badge_data.append({
-                "badge_id": badge_id,
-                "artwork_file": filename
-            })
+            if not form.validate_on_submit():
+                logger.debug("Form validation failed.")
+                for field_name, errors in form.errors.items():
+                    for error in errors:
+                        logger.error(f"Validation error - {field_name}: {error}")
+                        flash(f"{field_name}: {error}", "danger")
+                return render_template(
+                    "call_for_artists.html",
+                    form=form,
+                    badges=badges,
+                    submission_open=submission_open,
+                    submission_status=submission_status,
+                    submission_deadline=submission_deadline,
+                    previous_badge_data=previous_badge_data,
+                    is_admin=is_admin
+                )
 
-        if not form.validate_on_submit():
-            for field_name, errors in form.errors.items():
-                for error in errors:
-                    flash(f"{field_name}: {error}", "danger")
-
-            return render_template(
-                "call_for_artists.html",
-                form=form,
-                badges=badges,
-                submission_open=submission_open,
-                submission_status=submission_status,
-                submission_deadline=submission_deadline,
-                previous_badge_data=previous_badge_data,
-                is_admin=is_admin
+            logger.debug("Form validated successfully. Processing submission.")
+            submission = ArtistSubmission(
+                name=form.name.data,
+                email=form.email.data,
+                phone_number=form.phone_number.data,
+                artist_bio=form.artist_bio.data,
+                portfolio_link=form.portfolio_link.data,
+                statement=form.statement.data,
+                demographic_identity=form.demographic_identity.data,
+                lane_county_connection=form.lane_county_connection.data,
+                accessibility_needs=form.accessibility_needs.data,
+                future_engagement=form.future_engagement.data,
+                consent_to_data=form.consent_to_data.data,
+                opt_in_featured_artwork=form.opt_in_featured_artwork.data,
             )
-        else:
-            try:
-                name = form.name.data
-                email = form.email.data
-                phone_number = form.phone_number.data
-                artist_bio = form.artist_bio.data
-                portfolio_link = form.portfolio_link.data
-                statement = form.statement.data
-                demographic_identity = form.demographic_identity.data
-                lane_county_connection = form.lane_county_connection.data
-                accessibility_needs = form.accessibility_needs.data
-                future_engagement = form.future_engagement.data
-                consent_to_data = form.consent_to_data.data
-                opt_in_featured_artwork = form.opt_in_featured_artwork.data
+            db.session.add(submission)
+            db.session.flush()
+            logger.debug(f"Submission added to database: {submission}")
 
-                badge_ids = [badge_upload.badge_id.data for badge_upload in form.badge_uploads.entries]
-                artwork_files = [badge_upload.artwork_file.data for badge_upload in form.badge_uploads.entries]
-
-                if len(badge_ids) != len(artwork_files) or not badge_ids:
-                    flash("Each badge must have an associated artwork file.", "danger")
+            for badge_id, artwork_file in zip(
+                [badge_upload.badge_id.data for badge_upload in form.badge_uploads.entries],
+                [badge_upload.artwork_file.data for badge_upload in form.badge_uploads.entries]
+            ):
+                logger.debug(f"Processing badge ID {badge_id} with file {artwork_file}")
+                badge = Badge.query.get(int(badge_id))
+                if not badge:
+                    logger.error(f"Invalid badge ID: {badge_id}")
+                    flash("Invalid badge selection.", "danger")
+                    db.session.rollback()
                     return redirect(url_for("main.call_for_artists"))
 
-                submission = ArtistSubmission(
-                    name=name,
-                    email=email,
-                    phone_number=phone_number,
-                    artist_bio=artist_bio,
-                    portfolio_link=portfolio_link,
-                    statement=statement,
-                    demographic_identity=demographic_identity,
-                    lane_county_connection=lane_county_connection,
-                    accessibility_needs=accessibility_needs,
-                    future_engagement=future_engagement,
-                    consent_to_data=consent_to_data,
-                    opt_in_featured_artwork=opt_in_featured_artwork
-                )
-                db.session.add(submission)
-                db.session.flush()
-
-                for badge_id, artwork_file in zip(badge_ids, artwork_files):
-                    if not Badge.query.get(int(badge_id)):
-                        flash("Invalid badge selection.", "danger")
+                if hasattr(artwork_file, "filename"):
+                    file_ext = os.path.splitext(artwork_file.filename)[1]
+                    if not file_ext:
+                        logger.error(f"Invalid file extension for file: {artwork_file.filename}")
+                        flash("Invalid file extension for uploaded file.", "danger")
                         db.session.rollback()
                         return redirect(url_for("main.call_for_artists"))
 
-                    if hasattr(artwork_file, "filename"):
-                        file_ext = os.path.splitext(artwork_file.filename)[1]
-                        if not file_ext:
-                            flash(f"Invalid file extension for uploaded file.", "danger")
-                            db.session.rollback()
-                            return redirect(url_for("main.call_for_artists"))
+                    unique_filename = f"{uuid.uuid4()}{file_ext}"
+                    artwork_path = os.path.join(current_app.config["UPLOAD_FOLDER"], unique_filename)
+                    artwork_file.save(artwork_path)
+                    logger.debug(f"File saved to: {artwork_path}")
+                else:
+                    unique_filename = artwork_file
+                    logger.debug("Artwork file is pre-uploaded or set directly in previous data.")
 
-                        unique_filename = f"{uuid.uuid4()}{file_ext}"
-                        artwork_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
-                        artwork_file.save(artwork_path)
-                    else:
-                        unique_filename = artwork_file
+                badge_artwork = BadgeArtwork(
+                    submission_id=submission.id,
+                    badge_id=int(badge_id),
+                    artwork_file=unique_filename
+                )
+                db.session.add(badge_artwork)
+                logger.debug(f"BadgeArtwork added: {badge_artwork}")
 
-                    badge_artwork = BadgeArtwork(
-                        submission_id=submission.id,
-                        badge_id=int(badge_id),
-                        artwork_file=unique_filename
-                    )
-                    db.session.add(badge_artwork)
+            db.session.commit()
+            logger.info("Submission and badge artworks committed to database successfully.")
+            flash("Submission received successfully!", "success")
+            return redirect(url_for("main.submission_success"))
 
-                db.session.commit()
-                flash("Submission received successfully!", "success")
-                return redirect(url_for("main.submission_success"))
-
-            except Exception as e:
-                db.session.rollback()
-                flash("An error occurred while processing your submission. Please try again.", "danger")
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error during submission process: {e}")
+            logger.error(traceback.format_exc())
+            flash("An error occurred while processing your submission. Please try again.", "danger")
 
     return render_template(
         "call_for_artists.html",

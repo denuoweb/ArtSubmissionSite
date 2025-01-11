@@ -21,7 +21,7 @@ def file_size_limit(max_size_mb):
     return _file_size_limit
 
 
-class BadgeUploadForm(Form):
+class BadgeUploadForm(FlaskForm):
     badge_id = SelectField(
         "Select a Badge",
         coerce=int,
@@ -39,10 +39,10 @@ class BadgeUploadForm(Form):
         ],
     )
 
-class ArtistSubmissionForm(FlaskForm):
-    # Personal Information
+
+class ArtistSubmissionForm(FlaskForm):  # Form corrections and updates
     name = StringField(
-        "Name", 
+        "Name",
         validators=[
             DataRequired(message="Your name is required."),
             Length(max=100, message="Name cannot exceed 100 characters.")
@@ -50,7 +50,7 @@ class ArtistSubmissionForm(FlaskForm):
         render_kw={"placeholder": "Enter your full name"}
     )
     email = StringField(
-        "Email", 
+        "Email",
         validators=[
             DataRequired(message="Your email is required."),
             Email(message="Please provide a valid email address.")
@@ -58,7 +58,7 @@ class ArtistSubmissionForm(FlaskForm):
         render_kw={"placeholder": "Enter your email address"}
     )
     phone_number = StringField(
-        "Phone Number", 
+        "Phone Number",
         validators=[
             Optional(),
             Length(max=15, message="Phone number cannot exceed 15 digits."),
@@ -67,7 +67,7 @@ class ArtistSubmissionForm(FlaskForm):
         render_kw={"placeholder": "Enter your phone number"}
     )
     artist_bio = TextAreaField(
-        "Artist Bio (1,000 to 2,500 characters)", 
+        "Artist Bio (1,000 to 2,500 characters)",
         validators=[
             DataRequired(message="Please provide a brief artist bio."),
             Length(min=1000, max=2500, message="Bio must be between 1,000 to 2,500 characters.")
@@ -75,7 +75,7 @@ class ArtistSubmissionForm(FlaskForm):
         render_kw={"placeholder": "Write a brief bio about yourself."}
     )
     portfolio_link = StringField(
-        "Portfolio Link", 
+        "Portfolio Link",
         validators=[
             Optional(),
             Length(max=255, message="Portfolio URL cannot exceed 255 characters.")
@@ -83,25 +83,18 @@ class ArtistSubmissionForm(FlaskForm):
         render_kw={"placeholder": "Provide a link to your online portfolio (if available)"}
     )
     statement = TextAreaField(
-        "Statement of Interest (1,000 to 2,500 characters)", 
+        "Statement of Interest (1,000 to 2,500 characters)",
         validators=[
             DataRequired(message="Please provide your statement of interest."),
             Length(min=1000, max=2500, message="Statement must be between 1,000 to 2,500 characters.")
         ],
         render_kw={"placeholder": "Why do you want to contribute? How does your work reflect bicycling?"}
     )
-    
-    # Badge Uploads
     badge_uploads = FieldList(
         FormField(BadgeUploadForm),
         min_entries=1,
-        max_entries=3,
-        validators=[
-            DataRequired(message="Please provide at least one badge and artwork.")
-        ]
+        max_entries=3
     )
-    
-    # Demographic Information
     demographic_identity = StringField(
         "How would you describe your identity?",
         validators=[
@@ -119,10 +112,10 @@ class ArtistSubmissionForm(FlaskForm):
         render_kw={"placeholder": "Describe your connection to Lane County."}
     )
     accessibility_needs = TextAreaField(
-        "Do you have any accessibility needs we can accommodate?  (500 characters max)",
+        "Do you have any accessibility needs we can accommodate? (500 characters max)",
         validators=[
             Optional(),
-            Length(max=500, message="Response cannot exceed 500 characters. (500 characters max)")
+            Length(max=500, message="Response cannot exceed 500 characters.")
         ],
         render_kw={"placeholder": "Translation services, assistance, etc."}
     )
@@ -134,8 +127,6 @@ class ArtistSubmissionForm(FlaskForm):
         ],
         render_kw={"placeholder": "Describe your interest in future involvement."}
     )
-    
-    # Consent and Opt-In
     consent_to_data = BooleanField(
         "Do you consent to the Terms and Conditions?",
         validators=[DataRequired(message="Please provide your consent.")],
@@ -145,8 +136,6 @@ class ArtistSubmissionForm(FlaskForm):
         "Feature All Submitted Artwork (Voluntary Opt-In)",
         default=False
     )
-    
-    # Submit Button
     submit = SubmitField("Submit")
 
 class YouthArtistSubmissionForm(FlaskForm):
