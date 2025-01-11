@@ -53,7 +53,9 @@
 
 {% if not submission_open and not is_admin %}
 <div class="alert alert-warning">
-    Submissions are currently closed. You can review the details, but submissions cannot be submitted at this time.
+    Submissions are currently closed. The submission period is from 
+    <strong>{{ submission_period.submission_start.strftime('%B %d, %Y') }}</strong> to 
+    <strong>{{ submission_period.submission_end.strftime('%B %d, %Y') }}</strong>.
 </div>
 {% elif not submission_open and is_admin %}
 <div class="alert alert-info">

@@ -379,18 +379,24 @@ def call_for_artists():
         submission_deadline=submission_deadline,
         previous_badge_data=previous_badge_data,
         is_admin=is_admin,
-        application_root=application_root
+        application_root=application_root,
+        submission_period=submission_period  # Pass the submission period object
     )
+
 @main_bp.route("/call_for_youth_artists", methods=["GET", "POST"])
 def call_for_youth_artists():
     try:
         submission_open = is_submission_open()
         is_admin = getattr(current_user, 'is_admin', False)
-        submission_status = "Open" if submission_open else "Closed"
         submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
-        submission_deadline = (
+
+        submission_start = (
+            submission_period.submission_start.strftime("%B %d, %Y at %I:%M %p %Z")
+            if submission_period else None
+        )
+        submission_end = (
             submission_period.submission_end.strftime("%B %d, %Y at %I:%M %p %Z")
-            if submission_period else "N/A"
+            if submission_period else None
         )
 
         form = YouthArtistSubmissionForm()
@@ -413,8 +419,8 @@ def call_for_youth_artists():
                     form=form,
                     badges=badges,
                     submission_open=submission_open,
-                    submission_status=submission_status,
-                    submission_deadline=submission_deadline,
+                    submission_start=submission_start,
+                    submission_end=submission_end,
                     is_admin=is_admin,
                 )
 
@@ -471,9 +477,10 @@ def call_for_youth_artists():
             form=form,
             badges=badges,
             submission_open=submission_open,
-            submission_status=submission_status,
-            submission_deadline=submission_deadline,
+            submission_start=submission_start,
+            submission_end=submission_end,
             is_admin=is_admin,
+            submission_period=submission_period
         )
     except Exception as e:
         logger.error(f"Critical error in call_for_youth_artists: {e}")

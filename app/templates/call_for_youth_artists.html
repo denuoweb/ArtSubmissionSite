@@ -28,7 +28,14 @@
         {% if is_admin %}
             Submissions are currently closed for general participants. However, as an admin, you can still submit.
         {% else %}
-            Submissions are currently closed. You can review the details, but submissions cannot be submitted at this time.
+            Submissions are currently closed. 
+            {% if submission_start and submission_end %}
+                The submission period is from 
+                <strong>{{ submission_period.submission_start.strftime('%B %d, %Y') }}</strong> to 
+                <strong>{{ submission_period.submission_end.strftime('%B %d, %Y') }}</strong>.
+            {% else %}
+                The submission period dates are not available at this time.
+            {% endif %}
         {% endif %}
     </div>
 {% endif %}
