@@ -306,36 +306,41 @@ def call_for_artists():
 
 @main_bp.route("/call_for_youth_artists", methods=["GET", "POST"])
 def call_for_youth_artists():
-    submission_open = is_submission_open()
-    submission_status = "Open" if submission_open else "Closed"
-    submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
-    submission_deadline = submission_period.submission_end.strftime("%B %d, %Y at %I:%M %p %Z") if submission_period else "N/A"
+    try:
+        submission_open = is_submission_open()
+        submission_status = "Open" if submission_open else "Closed"
+        submission_period = SubmissionPeriod.query.order_by(SubmissionPeriod.id.desc()).first()
+        submission_deadline = (
+            submission_period.submission_end.strftime("%B %d, %Y at %I:%M %p %Z")
+            if submission_period else "N/A"
+        )
 
-    form = YouthArtistSubmissionForm()
 
-    badges = Badge.query.all()
-    badge_choices = [(None, "Select a badge")] + [(badge.id, badge.name) for badge in badges]
-    form.badge_id.choices = badge_choices
+        form = YouthArtistSubmissionForm()
 
-    if request.method == "POST":
+        badges = Badge.query.all()
+        badge_choices = [(None, "Select a badge")] + [(badge.id, badge.name) for badge in badges]
+        form.badge_id.choices = badge_choices
 
-        if not submission_open:
-            flash("Submissions are currently closed. You cannot submit at this time.", "danger")
-            return redirect(url_for("main.call_for_youth_artists"))
+        if request.method == "POST":
 
-        if not form.validate_on_submit():
-            for field_name, errors in form.errors.items():
-                for error in errors:
-                    flash(f"{field_name}: {error}", "danger")
-            return render_template(
-                "call_for_youth_artists.html",
-                form=form,
-                badges=badges,
-                submission_open=submission_open,
-                submission_status=submission_status,
-                submission_deadline=submission_deadline,
-            )
-        else:
+            if not submission_open:
+                flash("Submissions are currently closed. You cannot submit at this time.", "danger")
+                return redirect(url_for("main.call_for_youth_artists"))
+
+            if not form.validate_on_submit():
+                for field_name, errors in form.errors.items():
+                    for error in errors:
+                        flash(f"{field_name}: {error}", "danger")
+                return render_template(
+                    "call_for_youth_artists.html",
+                    form=form,
+                    badges=badges,
+                    submission_open=submission_open,
+                    submission_status=submission_status,
+                    submission_deadline=submission_deadline,
+                )
+
             try:
                 name = form.name.data
                 age = form.age.data
@@ -345,6 +350,7 @@ def call_for_youth_artists():
                 about_yourself = form.about_yourself.data
                 badge_id = form.badge_id.data
                 artwork_file = form.artwork_file.data
+
 
                 if badge_id is None:
                     flash("Please select a valid badge.", "danger")
@@ -360,7 +366,7 @@ def call_for_youth_artists():
                     return redirect(url_for("main.call_for_youth_artists"))
 
                 unique_filename = f"{uuid.uuid4()}{file_ext}"
-                artwork_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
+                artwork_path = os.path.join(current_app.config["UPLOAD_FOLDER"], unique_filename)
                 artwork_file.save(artwork_path)
 
                 submission = YouthArtistSubmission(
@@ -383,14 +389,17 @@ def call_for_youth_artists():
                 db.session.rollback()
                 flash("An error occurred while processing your submission. Please try again.", "danger")
 
-    return render_template(
-        "call_for_youth_artists.html",
-        form=form,
-        badges=badges,
-        submission_open=submission_open,
-        submission_status=submission_status,
-        submission_deadline=submission_deadline,
-    )
+        return render_template(
+            "call_for_youth_artists.html",
+            form=form,
+            badges=badges,
+            submission_open=submission_open,
+            submission_status=submission_status,
+            submission_deadline=submission_deadline,
+        )
+    except Exception as e:
+        flash("A critical error occurred. Please contact support.", "danger")
+        return redirect(url_for("main.index"))
 
 
 @main_bp.route("/submission-success")

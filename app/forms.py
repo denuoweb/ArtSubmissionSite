@@ -163,7 +163,7 @@ class YouthArtistSubmissionForm(FlaskForm):
         "Age",
         validators=[
             DataRequired(message="Your age is required."),
-            NumberRange(min=13, max=17, message="Age must be between 13 and 18.")
+            NumberRange(min=13, max=18, message="Age must be between 13 and 18.")
         ],
         render_kw={"placeholder": "Enter your age"}
     )
