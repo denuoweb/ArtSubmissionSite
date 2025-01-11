@@ -1,7 +1,8 @@
-from flask import Blueprint, jsonify, render_template, flash, redirect, url_for, request, current_app
+from flask import Blueprint, jsonify, render_template, flash, redirect, request, current_app
 from flask_login import login_required, current_user
 from app.forms import LogoutForm, SubmissionDatesForm
 from app.models import SubmissionPeriod, User, Badge, db, ArtistSubmission, BadgeArtwork, JudgeVote, YouthArtistSubmission
+from app.utils import custom_url_for as url_for
 from datetime import datetime, timezone
 from io import TextIOWrapper
 from sqlalchemy import func

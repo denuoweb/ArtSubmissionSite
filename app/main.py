@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, render_template, request, redirect, url_for, flash, session, abort, make_response, current_app
+from flask import Blueprint, jsonify, render_template, request, redirect, flash, session, abort, make_response, current_app
 from flask_wtf.csrf import generate_csrf
 from flask_login import login_required, current_user
 from app.auth import judges_login
