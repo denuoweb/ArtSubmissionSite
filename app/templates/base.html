@@ -17,6 +17,16 @@
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}" defer></script>
     <script>const basePath = "{{ application_root }}";</script>
 </head>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-YG2Q1Q1XWM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-YG2Q1Q1XWM');
+</script>
+
 <body data-base-path="{{ config['APPLICATION_ROOT'] | default('') }}">
     <div class="container min-vh-100 d-flex flex-column">
         <!-- Original Navbar -->
