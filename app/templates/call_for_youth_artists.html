@@ -23,6 +23,13 @@
     Fill out the form below with your information and artwork submission. Be sure to include all required fields so we can process your application.
 </p>
 
+<h2>Badge List</h2>
+<p id="badge-list">
+    A complete list of the badges to choose from is available 
+    <a href="#" onclick="openBadgeModal(); return false;">here</a>. Each badge represents a specific quest, such as cycling to local landmarks, participating in community events, or promoting sustainability.
+</p>
+
+
 {% if not submission_open %}
     <div class="alert {% if is_admin %}alert-info{% else %}alert-warning{% endif %}">
         {% if is_admin %}
