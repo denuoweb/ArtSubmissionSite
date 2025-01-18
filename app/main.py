@@ -580,43 +580,28 @@ def check_email():
     API endpoint to check if an email is already used in the database.
     Includes console print statements for debugging.
     """
-    print("INFO: Received /api/check-email request")  # Log when the request is received
 
     try:
-        # Print raw request details
-        print("DEBUG: Request headers:", request.headers)
-        print("DEBUG: Request body:", request.data)
-
         # Parse JSON payload
         data = request.get_json()
-        print("DEBUG: Parsed JSON payload:", data)
 
         # Validate payload
         if not data:
-            print("ERROR: No JSON data received in the request.")
             return jsonify({"error": "Invalid request: No data provided"}), 400
 
         # Extract email field
         email = data.get("email", "").strip()
-        print(f"DEBUG: Extracted email: {email}")
 
         if not email:
-            print("WARNING: Email field is missing or empty.")
             return jsonify({"error": "Email is required"}), 400
 
         # Query the database for the email
-        print(f"INFO: Checking database for email: {email}")
         existing_submission = ArtistSubmission.query.filter_by(email=email).first()
 
         if existing_submission:
-            print(f"INFO: Email {email} is already in use.")
             return jsonify({"isAvailable": False}), 200
 
-        print(f"INFO: Email {email} is available.")
         return jsonify({"isAvailable": True}), 200
 
     except Exception as e:
-        # Print exception details
-        print("ERROR: Exception occurred while processing /api/check-email request")
-        print(e)
         return jsonify({"error": "Internal server error"}), 500
