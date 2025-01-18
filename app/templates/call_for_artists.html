@@ -165,7 +165,7 @@
     <button type="button" id="addBadgeUpload" class="btn btn-success mt-3">Add Artwork Upload</button><br>
 
     <!-- Acknowledgment and Consent -->
-    <div class="mb-3 form-check">
+    <div class="mb-3 form-check custom-checkbox">
         {{ form.consent_to_data(class_="form-check-input", id=form.consent_to_data.id) }}
         <label class="form-check-label" for="{{ form.consent_to_data.id }}">{{ form.consent_to_data.label }}</label>
         <div class="invalid-feedback" id="consent_to_data-error"></div>
@@ -173,7 +173,7 @@
     </div>
 
     <!-- Featured Artwork (Voluntary Opt-In) -->
-    <div class="mb-3 form-check">
+    <div class="mb-3 form-check custom-checkbox">
         {{ form.opt_in_featured_artwork(class_="form-check-input", id=form.opt_in_featured_artwork.id) }}
         <label class="form-check-label" for="{{ form.opt_in_featured_artwork.id }}">
             {{ form.opt_in_featured_artwork.label }}

@@ -96,18 +96,18 @@
         {{ form.artwork_file(class="form-control") }}
     </div>
 
-    <div class="mb-3 form-check">
-        {{ form.parent_consent(class="form-check-input") }}
+    <!-- Parent Consent -->
+    <div class="mb-3 form-check custom-checkbox">
+        {{ form.parent_consent(class_="form-check-input", id=form.parent_consent.id) }}
         <label class="form-check-label" for="{{ form.parent_consent.id }}">
             {{ form.parent_consent.label.text }}
         </label>
         <a href="#" class="ms-2" onclick="openTermsModal(); return false;">Terms and Conditions</a>
-
     </div>
 
     <!-- Featured Artwork (Voluntary Opt-In) -->
-    <div class="mb-3 form-check">
-        {{ form.opt_in_featured_artwork(class="form-check-input", id=form.opt_in_featured_artwork.id) }}
+    <div class="mb-3 form-check custom-checkbox">
+        {{ form.opt_in_featured_artwork(class_="form-check-input", id=form.opt_in_featured_artwork.id) }}
         <label class="form-check-label" for="{{ form.opt_in_featured_artwork.id }}">
             {{ form.opt_in_featured_artwork.label.text }}
         </label>
