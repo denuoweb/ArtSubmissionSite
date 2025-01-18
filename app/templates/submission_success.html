@@ -2,5 +2,60 @@
 
 {% block content %}
 <h1>Submission Successful</h1>
-<p>Thank You for Your Submission!  Your badge design has been successfully submitted. We’re excited to review your creative work and appreciate your contribution to the Quest by Cycle project.  What’s next?      Our team will carefully review all submissions after the deadline.     If your design is selected, we’ll contact you at the email address you provided with next steps.  If you have any questions in the meantime, feel free to reach out to us at info@QuestByCycle.org.  Thank you for helping inspire sustainable living and cultural engagement through art!</p>
+<p>Thank you for your submission! We’re excited to review your creative work and appreciate your contribution to the Quest by Cycle project.</p>
+
+{% if submission_details %}
+    <h2>Submission Details</h2>
+    <ul>
+        {% if submission_type == "artist" %}
+            <li><strong>Name:</strong> {{ submission_details.name }}</li>
+            <li><strong>Email:</strong> {{ submission_details.email }}</li>
+            <li><strong>Phone Number:</strong> {{ submission_details.phone_number or 'N/A' }}</li>
+            <li><strong>Portfolio Link:</strong> 
+                {% if submission_details.portfolio_link %}
+                    <a href="{{ submission_details.portfolio_link }}" target="_blank">{{ submission_details.portfolio_link }}</a>
+                {% else %}
+                    N/A
+                {% endif %}
+            </li>
+            <li><strong>Artist Bio:</strong> {{ submission_details.artist_bio }}</li>
+            <li><strong>Statement:</strong> {{ submission_details.statement }}</li>
+            <li><strong>Demographic Identity:</strong> {{ submission_details.demographic_identity or 'N/A' }}</li>
+            <li><strong>Lane County Connection:</strong> {{ submission_details.lane_county_connection or 'N/A' }}</li>
+            <li><strong>Heard About Contest:</strong> {{ submission_details.hear_about_contest or 'N/A' }}</li>
+            <li><strong>Future Engagement Interest:</strong> {{ submission_details.future_engagement or 'N/A' }}</li>
+            <li><strong>Consent to Data:</strong> {{ "Yes" if submission_details.consent_to_data else "No" }}</li>
+            <li><strong>Opt-In for Featured Artwork:</strong> {{ "Yes" if submission_details.opt_in_featured_artwork else "No" }}</li>
+            
+            {% if badge_artworks %}
+                <h3>Submitted Badge Artworks</h3>
+                <ul>
+                    {% for artwork in badge_artworks %}
+                        <li>
+                            <strong>Badge Name:</strong> {{ artwork.badge.name }}<br>
+                            <strong>Uploaded Image:</strong><br>
+                            <img src="{{ url_for('static', filename='submissions/' + artwork.artwork_file) }}" alt="Artwork for {{ artwork.badge.name }}" style="max-width: 300px; max-height: 300px;">
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% elif submission_type == "youth_artist" %}
+            <li><strong>Name:</strong> {{ submission_details.name }}</li>
+            <li><strong>Age:</strong> {{ submission_details.age }}</li>
+            <li><strong>Parent Contact Info:</strong> {{ submission_details.parent_contact_info }}</li>
+            <li><strong>Email:</strong> {{ submission_details.email }}</li>
+            <li><strong>Reason for Design:</strong> {{ submission_details.about_why_design }}</li>
+            <li><strong>About Yourself:</strong> {{ submission_details.about_yourself }}</li>
+            <li><strong>Badge Name:</strong> {{ submission_details.badge.name }}</li>
+            <li><strong>Uploaded Image:</strong><br>
+                <img src="{{ url_for('static', filename='submissions/' + submission_details.artwork_file) }}" alt="Artwork for {{ submission_details.badge.name }}" style="max-width: 300px; max-height: 300px;">
+            </li>
+            <li><strong>Opt-In for Featured Artwork:</strong> {{ "Yes" if submission_details.opt_in_featured_artwork else "No" }}</li>
+            <li><strong>Parent Consent:</strong> {{ "Yes" if submission_details.parent_consent else "No" }}</li>
+        {% endif %}
+    </ul>
+{% endif %}
+
+<p>Our team will carefully review all submissions after the deadline. If your design is selected, we’ll contact you at the email address you provided with next steps.</p>
+<p>If you have any questions, feel free to reach out to us at info@QuestByCycle.org. Thank you for helping inspire sustainable living and cultural engagement through art!</p>
 {% endblock %}

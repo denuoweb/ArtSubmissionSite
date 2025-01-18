@@ -234,8 +234,6 @@ def judges_ballot():
         logout_form=logout_form
     )
 
-
-
 @main_bp.route("/call_for_artists", methods=["GET", "POST"])
 def call_for_artists():
     application_root = current_app.config.get("APPLICATION_ROOT", "/")
@@ -279,9 +277,14 @@ def call_for_artists():
             return redirect(url_for("main.call_for_artists"))
 
         try:
+            # Validate and prepare submission
             for badge_upload in form.badge_uploads.entries:
                 badge_id = badge_upload.badge_id.data
                 artwork_file = badge_upload.artwork_file.data
+
+                if not badge_id or not artwork_file:
+                    flash("Please provide both badge and artwork file.", "danger")
+                    return redirect(url_for("main.call_for_artists"))
 
                 filename = artwork_file.filename if hasattr(artwork_file, "filename") else artwork_file
                 previous_badge_data.append({"badge_id": badge_id, "artwork_file": filename})
@@ -304,6 +307,7 @@ def call_for_artists():
                     is_admin=is_admin
                 )
 
+            # Save the main submission
             logger.debug("Form validated successfully. Processing submission.")
             submission = ArtistSubmission(
                 name=form.name.data,
@@ -323,11 +327,11 @@ def call_for_artists():
             db.session.flush()
             logger.debug(f"Submission added to database: {submission}")
 
-            for badge_id, artwork_file in zip(
-                [badge_upload.badge_id.data for badge_upload in form.badge_uploads.entries],
-                [badge_upload.artwork_file.data for badge_upload in form.badge_uploads.entries]
-            ):
-                logger.debug(f"Processing badge ID {badge_id} with file {artwork_file}")
+            # Save badge artworks
+            for badge_upload in form.badge_uploads.entries:
+                badge_id = badge_upload.badge_id.data
+                artwork_file = badge_upload.artwork_file.data
+
                 badge = Badge.query.get(int(badge_id))
                 if not badge:
                     logger.error(f"Invalid badge ID: {badge_id}")
@@ -335,6 +339,7 @@ def call_for_artists():
                     db.session.rollback()
                     return redirect(url_for("main.call_for_artists"))
 
+                # Handle artwork file
                 if hasattr(artwork_file, "filename"):
                     file_ext = os.path.splitext(artwork_file.filename)[1]
                     if not file_ext:
@@ -348,9 +353,9 @@ def call_for_artists():
                     artwork_file.save(artwork_path)
                     logger.debug(f"File saved to: {artwork_path}")
                 else:
-                    unique_filename = artwork_file
-                    logger.debug("Artwork file is pre-uploaded or set directly in previous data.")
+                    unique_filename = artwork_file  # Pre-uploaded or directly set
 
+                # Save badge artwork
                 badge_artwork = BadgeArtwork(
                     submission_id=submission.id,
                     badge_id=int(badge_id),
@@ -362,7 +367,9 @@ def call_for_artists():
             db.session.commit()
             logger.info("Submission and badge artworks committed to database successfully.")
             flash("Submission received successfully!", "success")
-            return redirect(url_for("main.submission_success"))
+            return redirect(
+                url_for("main.submission_success", submission_id=submission.id, type="artist")
+            )
 
         except Exception as e:
             db.session.rollback()
@@ -382,6 +389,7 @@ def call_for_artists():
         application_root=application_root,
         submission_period=submission_period  # Pass the submission period object
     )
+
 
 @main_bp.route("/call_for_youth_artists", methods=["GET", "POST"])
 def call_for_youth_artists():
@@ -469,7 +477,9 @@ def call_for_youth_artists():
                 db.session.commit()
 
                 flash("Submission received successfully!", "success")
-                return redirect(url_for("main.submission_success"))
+                return redirect(
+                    url_for("main.submission_success", submission_id=submission.id, type="youth_artist")
+                )
 
             except Exception as e:
                 db.session.rollback()
@@ -494,7 +504,26 @@ def call_for_youth_artists():
 
 @main_bp.route("/submission-success")
 def submission_success():
-    return render_template("submission_success.html")
+    submission_id = request.args.get("submission_id")
+    submission_type = request.args.get("type")
+
+    submission_details = None
+    badge_artworks = []
+
+    if submission_type == "artist":
+        submission_details = ArtistSubmission.query.get(submission_id)
+        if submission_details:
+            badge_artworks = BadgeArtwork.query.filter_by(submission_id=submission_details.id).all()
+    elif submission_type == "youth_artist":
+        submission_details = YouthArtistSubmission.query.get(submission_id)
+
+    return render_template(
+        "submission_success.html",
+        submission_details=submission_details,
+        submission_type=submission_type,
+        badge_artworks=badge_artworks,
+    )
+
 
 
 @main_bp.route("/judges/submission-success")
