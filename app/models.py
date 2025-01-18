@@ -20,8 +20,9 @@ class Badge(db.Model):
 # Artist submission model for adult artists
 class ArtistSubmission(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     name = db.Column(db.String(100), nullable=False)  # Artist's full name
-    email = db.Column(db.String(120), nullable=False)  # Email address (unique constraint can be added if necessary)
+    email = db.Column(db.String(120), nullable=False, unique=True)  # Email address (unique constraint can be added if necessary)
     phone_number = db.Column(db.String(15), nullable=True)  # Optional phone number
     artist_bio = db.Column(db.Text, nullable=False)  # Biography of the artist
     portfolio_link = db.Column(db.String(255), nullable=True)  # Optional link to portfolio
@@ -41,10 +42,11 @@ class ArtistSubmission(db.Model):
 # Youth artist submission model for submissions from young artists
 class YouthArtistSubmission(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     name = db.Column(db.String(100), nullable=False)  # Youth artist's name
     age = db.Column(db.Integer, nullable=False)  # Age of the youth artist
     parent_contact_info = db.Column(db.Text, nullable=False)  # Parent's contact information
-    email = db.Column(db.String(120), nullable=False)  # Youth artist's email
+    email = db.Column(db.String(120), nullable=False, unique=True)  # Youth artist's email
     about_why_design = db.Column(db.Text, nullable=False)  # Reason for designing the artwork
     about_yourself = db.Column(db.Text, nullable=False)  # Information about the youth artist
     badge_id = db.Column(db.Integer, db.ForeignKey("badge.id"), nullable=False)  # Reference to Badge
