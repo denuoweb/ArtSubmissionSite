@@ -96,9 +96,26 @@
         {{ form.artwork_file(class="form-control") }}
     </div>
 
-    <div class="mb-3">
-        {{ form.parent_consent.label(class="form-check-label") }}
+    <div class="mb-3 form-check">
         {{ form.parent_consent(class="form-check-input") }}
+        <label class="form-check-label" for="{{ form.parent_consent.id }}">
+            {{ form.parent_consent.label.text }}
+        </label>
+        <a href="#" class="ms-2" onclick="openTermsModal(); return false;">Terms and Conditions</a>
+
+    </div>
+
+    <!-- Featured Artwork (Voluntary Opt-In) -->
+    <div class="mb-3 form-check">
+        {{ form.opt_in_featured_artwork(class="form-check-input", id=form.opt_in_featured_artwork.id) }}
+        <label class="form-check-label" for="{{ form.opt_in_featured_artwork.id }}">
+            {{ form.opt_in_featured_artwork.label.text }}
+        </label>
+        <p class="form-text">
+            By checking this box, you allow Quest by Cycle to feature your submitted artwork in the
+            game and promotional materials (with attribution) if your submission is not selected for an
+            award. We deeply appreciate your contribution, as it enriches the game with community creativity and input. This is entirely voluntary, and no additional compensation is provided.
+        </p>
     </div>
 
     <div>

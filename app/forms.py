@@ -138,6 +138,7 @@ class ArtistSubmissionForm(FlaskForm):  # Form corrections and updates
     )
     submit = SubmitField("Submit")
 
+
 class YouthArtistSubmissionForm(FlaskForm):
     # Personal Information
     name = StringField(
@@ -208,8 +209,13 @@ class YouthArtistSubmissionForm(FlaskForm):
 
     # Parent Consent
     parent_consent = BooleanField(
-        "Parent/Guardian Consent",
+        "Does your Parent/Guardian consent to the Terms and Conditions?",
         validators=[DataRequired(message="Parent/Guardian consent is required.")],
+        default=False
+    )
+
+    opt_in_featured_artwork = BooleanField(
+        "Feature All Submitted Artwork (Voluntary Opt-In)",
         default=False
     )
 

@@ -433,6 +433,8 @@ def call_for_youth_artists():
                 about_yourself = form.about_yourself.data
                 badge_id = form.badge_id.data
                 artwork_file = form.artwork_file.data
+                opt_in_featured_artwork=form.opt_in_featured_artwork.data
+                parent_consent=form.parent_consent.data
 
                 if badge_id is None:
                     flash("Please select a valid badge.", "danger")
@@ -459,7 +461,9 @@ def call_for_youth_artists():
                     about_why_design=about_why_design,
                     about_yourself=about_yourself,
                     badge_id=badge_id,
-                    artwork_file=unique_filename
+                    artwork_file=unique_filename,
+                    opt_in_featured_artwork=opt_in_featured_artwork,
+                    parent_consent=parent_consent
                 )
                 db.session.add(submission)
                 db.session.commit()

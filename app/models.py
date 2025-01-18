@@ -49,7 +49,9 @@ class YouthArtistSubmission(db.Model):
     about_yourself = db.Column(db.Text, nullable=False)  # Information about the youth artist
     badge_id = db.Column(db.Integer, db.ForeignKey("badge.id"), nullable=False)  # Reference to Badge
     artwork_file = db.Column(db.String(255), nullable=False)  # File path for the artwork
-
+    opt_in_featured_artwork = db.Column(db.Boolean, nullable=False, default=False)  # Opt-in for featuring artwork
+    parent_consent = db.Column(db.Boolean, nullable=False, default=False)  # Parent/Guardian consent
+    
     badge = db.relationship("Badge", backref="youth_submissions")
     judge_votes = db.relationship('JudgeVote', backref='youth_submission', cascade='all, delete-orphan')
 
