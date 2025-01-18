@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("submissionForm");
     const emailField = document.getElementById("email");
     const emailErrorContainer = document.getElementById("email-error");
+
     let emailIsValid = false;
 
     if (!emailField || !form) {
@@ -12,17 +13,15 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
-    // Validate email format
     function validateEmailFormat(email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
     }
 
-    // Check email availability
     async function checkEmailAvailability(email) {
         try {
             const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-            const response = await fetch("/api/check-email", {
+            const response = await fetch(`${basePath}/api/check-email`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -43,7 +42,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Email field blur event
     emailField.addEventListener("blur", async () => {
         const email = emailField.value.trim();
 
@@ -66,7 +64,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // File inputs with existing files
     const fileInputs = document.querySelectorAll("input[type='file'][data-existing]");
     fileInputs.forEach(input => {
         const existingFile = input.dataset.existing;
@@ -78,14 +75,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Update Add Badge button
     function updateAddBadgeButton() {
         const currentUploads = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
         addBadgeBtn.disabled = currentUploads >= maxBadgeUploads;
         addBadgeBtn.style.display = currentUploads >= maxBadgeUploads ? "none" : "block";
     }
 
-    // Populate dropdown
     function populateBadgeDropdown(selectElement, badgeData) {
         selectElement.innerHTML = '<option value="" disabled selected>Select a Badge</option>';
         badgeData.forEach(badge => {
@@ -96,7 +91,28 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Add badge upload field
+    async function fetchAndPopulateBadgeDropdown(selectElement) {
+        try {
+            const response = await fetch(`${basePath}/api/badges`);
+
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}`);
+            }
+
+            const responseText = await response.text();
+
+            try {
+                const badgeData = JSON.parse(responseText);
+                populateBadgeDropdown(selectElement, badgeData);
+            } catch (jsonError) {
+                console.error("Invalid JSON response:", responseText);
+                throw jsonError;
+            }
+        } catch (error) {
+            console.error("Error fetching badges:", error);
+        }
+    }
+
     function addBadgeUpload() {
         const currentUploads = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
         if (currentUploads >= maxBadgeUploads) return;
@@ -127,16 +143,12 @@ document.addEventListener("DOMContentLoaded", () => {
         badgeUploadContainer.appendChild(newBadgeUpload);
 
         const badgeSelect = document.getElementById(badgeIdName);
-        fetch("/api/badges")
-            .then(response => response.json())
-            .then(badgeData => populateBadgeDropdown(badgeSelect, badgeData))
-            .catch(error => console.error("Error fetching badges:", error));
+        fetchAndPopulateBadgeDropdown(badgeSelect);
 
         newBadgeUpload.querySelector(".removeBadgeUpload").addEventListener("click", () => {
             badgeUploadContainer.removeChild(newBadgeUpload);
             updateAddBadgeButton();
 
-            // Ensure at least one badge upload is always present
             if (badgeUploadContainer.querySelectorAll(".badge-upload-unit").length === 0) {
                 addBadgeUpload();
             }
@@ -145,29 +157,24 @@ document.addEventListener("DOMContentLoaded", () => {
         updateAddBadgeButton();
     }
 
-    // Automatically add the first badge upload section on page load
     if (badgeUploadContainer.querySelectorAll(".badge-upload-unit").length === 0) {
         addBadgeUpload();
     }
 
-    // Attach click event to Add Badge button
     addBadgeBtn.addEventListener("click", addBadgeUpload);
 
-    // Form submission handling
     form.addEventListener("submit", (event) => {
         let formIsValid = true;
 
-        // Email validation
         if (!emailIsValid) {
             event.preventDefault();
             emailErrorContainer.textContent = "Please correct the email issues before submitting.";
             emailErrorContainer.style.display = "block";
-            emailField.focus(); // Focus on the email field
-            alert("Invalid email! Please fix the email before submitting."); // Optional: alert user
+            emailField.focus();
+            alert("Invalid email! Please fix the email before submitting.");
             formIsValid = false;
         }
 
-        // Validate required fields
         const requiredFields = form.querySelectorAll("[required]");
         requiredFields.forEach(field => {
             const errorContainer = document.getElementById(`${field.id}-error`);
@@ -176,7 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     errorContainer.textContent = field.validationMessage || "This field is required.";
                     errorContainer.style.display = "block";
                 }
-                if (formIsValid) field.focus(); // Focus on the first invalid field
+                if (formIsValid) field.focus();
                 formIsValid = false;
             } else if (errorContainer) {
                 errorContainer.textContent = "";
