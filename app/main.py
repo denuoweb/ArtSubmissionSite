@@ -283,7 +283,7 @@ def call_for_artists():
             flash("The provided email is already associated with an existing submission. Please use a different email.", "danger")
             return render_template(
                 "call_for_artists.html",
-                form=form,  # Return the form with existing data
+                form=form,
                 badges=badges,
                 submission_open=submission_open,
                 submission_status=submission_status,
@@ -298,11 +298,14 @@ def call_for_artists():
                 badge_id = badge_upload.badge_id.data
                 artwork_file = badge_upload.artwork_file.data
 
-                if not badge_id or not artwork_file:
+                logger.debug(f"Badge ID: {badge_id}, Artwork File: {artwork_file}")
+
+                # Ensure badge ID and artwork file are provided
+                if not badge_id or (not artwork_file and not badge_upload.artwork_file.data):
                     flash("Please provide both badge and artwork file.", "danger")
                     return redirect(url_for("main.call_for_artists"))
 
-                filename = artwork_file.filename if hasattr(artwork_file, "filename") else artwork_file
+                filename = artwork_file.filename if hasattr(artwork_file, "filename") else "No file"
                 previous_badge_data.append({"badge_id": badge_id, "artwork_file": filename})
             logger.debug(f"Previous badge data: {previous_badge_data}")
 
@@ -556,7 +559,6 @@ def submission_success():
     )
 
 
-
 @main_bp.route("/judges/submission-success")
 def judges_submission_success():
     return render_template("judges_submission_success.html")
@@ -570,3 +572,51 @@ def api_badges():
         {"id": badge.id, "name": badge.name, "description": badge.description}
         for badge in badges
     ])
+
+
+@main_bp.route("/api/check-email", methods=["POST"])
+def check_email():
+    """
+    API endpoint to check if an email is already used in the database.
+    Includes console print statements for debugging.
+    """
+    print("INFO: Received /api/check-email request")  # Log when the request is received
+
+    try:
+        # Print raw request details
+        print("DEBUG: Request headers:", request.headers)
+        print("DEBUG: Request body:", request.data)
+
+        # Parse JSON payload
+        data = request.get_json()
+        print("DEBUG: Parsed JSON payload:", data)
+
+        # Validate payload
+        if not data:
+            print("ERROR: No JSON data received in the request.")
+            return jsonify({"error": "Invalid request: No data provided"}), 400
+
+        # Extract email field
+        email = data.get("email", "").strip()
+        print(f"DEBUG: Extracted email: {email}")
+
+        if not email:
+            print("WARNING: Email field is missing or empty.")
+            return jsonify({"error": "Email is required"}), 400
+
+        # Query the database for the email
+        print(f"INFO: Checking database for email: {email}")
+        existing_submission = ArtistSubmission.query.filter_by(email=email).first()
+
+        if existing_submission:
+            print(f"INFO: Email {email} is already in use.")
+            return jsonify({"isAvailable": False}), 200
+
+        print(f"INFO: Email {email} is available.")
+        return jsonify({"isAvailable": True}), 200
+
+    except Exception as e:
+        # Print exception details
+        print("ERROR: Exception occurred while processing /api/check-email request")
+        print(e)
+        return jsonify({"error": "Internal server error"}), 500
