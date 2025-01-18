@@ -276,6 +276,22 @@ def call_for_artists():
             flash("Submissions are currently closed. You cannot submit at this time.", "danger")
             return redirect(url_for("main.call_for_artists"))
 
+        # Check if the email already exists
+        email = form.email.data
+        existing_submission = ArtistSubmission.query.filter_by(email=email).first()
+        if existing_submission:
+            flash("The provided email is already associated with an existing submission. Please use a different email.", "danger")
+            return render_template(
+                "call_for_artists.html",
+                form=form,  # Return the form with existing data
+                badges=badges,
+                submission_open=submission_open,
+                submission_status=submission_status,
+                submission_deadline=submission_deadline,
+                previous_badge_data=previous_badge_data,
+                is_admin=is_admin
+            )
+
         try:
             # Validate and prepare submission
             for badge_upload in form.badge_uploads.entries:
@@ -418,6 +434,21 @@ def call_for_youth_artists():
                 flash("Submissions are currently closed. You cannot submit at this time.", "danger")
                 return redirect(url_for("main.call_for_youth_artists"))
 
+            # Check if the email already exists
+            email = form.email.data
+            existing_submission = YouthArtistSubmission.query.filter_by(email=email).first()
+            if existing_submission:
+                flash("The provided email is already associated with an existing youth submission. Please use a different email.", "danger")
+                return render_template(
+                    "call_for_youth_artists.html",
+                    form=form,  # Return the form with existing data
+                    badges=badges,
+                    submission_open=submission_open,
+                    submission_start=submission_start,
+                    submission_end=submission_end,
+                    is_admin=is_admin,
+                )
+
             if not form.validate_on_submit():
                 for field_name, errors in form.errors.items():
                     for error in errors:
@@ -539,16 +570,3 @@ def api_badges():
         {"id": badge.id, "name": badge.name, "description": badge.description}
         for badge in badges
     ])
-
-
-@main_bp.route("/validate_email", methods=["POST"])
-def validate_email():
-    email = request.json.get("email")
-    if not email:
-        return jsonify({"error": "Email is required"}), 400
-
-    existing_submission = ArtistSubmission.query.filter_by(email=email).first()
-    if existing_submission:
-        return jsonify({"error": "Email is already in use"}), 409
-    return jsonify({"success": "Email is available"}), 200
-
