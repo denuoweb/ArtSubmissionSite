@@ -97,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Add badge upload field
-    addBadgeBtn.addEventListener("click", () => {
+    function addBadgeUpload() {
         const currentUploads = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
         if (currentUploads >= maxBadgeUploads) return;
 
@@ -135,10 +135,23 @@ document.addEventListener("DOMContentLoaded", () => {
         newBadgeUpload.querySelector(".removeBadgeUpload").addEventListener("click", () => {
             badgeUploadContainer.removeChild(newBadgeUpload);
             updateAddBadgeButton();
+
+            // Ensure at least one badge upload is always present
+            if (badgeUploadContainer.querySelectorAll(".badge-upload-unit").length === 0) {
+                addBadgeUpload();
+            }
         });
 
         updateAddBadgeButton();
-    });
+    }
+
+    // Automatically add the first badge upload section on page load
+    if (badgeUploadContainer.querySelectorAll(".badge-upload-unit").length === 0) {
+        addBadgeUpload();
+    }
+
+    // Attach click event to Add Badge button
+    addBadgeBtn.addEventListener("click", addBadgeUpload);
 
     // Form submission handling
     form.addEventListener("submit", (event) => {
