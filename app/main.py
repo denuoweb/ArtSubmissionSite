@@ -262,9 +262,9 @@ def call_for_artists():
     badges = Badge.query.all()
     logger.debug(f"Retrieved {len(badges)} badges from the database.")
 
-    badge_choices = [(badge.id, f"{badge.name}: {badge.description}") for badge in badges]
+    badge_choices = [(str(badge.id), f"{badge.name}: {badge.description}") for badge in badges]
     for badge_upload in form.badge_uploads.entries:
-        badge_upload.badge_id.choices = badge_choices
+        badge_upload.form.badge_id.choices = badge_choices
     logger.debug("Badge choices populated in form.")
 
     if request.method == "POST":
@@ -292,15 +292,15 @@ def call_for_artists():
         try:
             # Process each badge upload entry
             for badge_upload in form.badge_uploads.entries:
-                badge_id = badge_upload.badge_id.data
-                artwork_file = badge_upload.artwork_file.data
+                badge_id = badge_upload.form.badge_id.data
+                artwork_file = badge_upload.form.artwork_file.data
 
                 logger.debug(f"Badge ID: {badge_id}, Artwork File: {artwork_file}")
 
                 # Check if a new file has been uploaded
                 if not artwork_file or not hasattr(artwork_file, "filename") or not artwork_file.filename.strip():
                     # Attempt to use the cached file path
-                    cached_file_path = badge_upload.cached_file_path.data  # Access the hidden field
+                    cached_file_path = badge_upload.form.cached_file_path.data  # Access the hidden field
                     if cached_file_path and os.path.exists(cached_file_path):
                         logger.debug(f"Using cached file for badge {badge_id}: {cached_file_path}")
                         continue  # No action needed; cached file is already associated
@@ -335,7 +335,7 @@ def call_for_artists():
                     artwork_path = os.path.join(current_app.config["UPLOAD_FOLDER"], unique_filename)
                     artwork_file.save(artwork_path)
                     logger.debug(f"File saved: {artwork_path}")
-                    badge_upload.cached_file_path.data = artwork_path  # Update the cached_file_path
+                    badge_upload.form.cached_file_path.data = artwork_path  # Update the cached_file_path
 
             # Validate the form after processing file uploads
             if not form.validate_on_submit():
@@ -376,8 +376,8 @@ def call_for_artists():
 
             # Save badge artworks
             for badge_upload in form.badge_uploads.entries:
-                badge_id = badge_upload.badge_id.data
-                artwork_file = badge_upload.artwork_file.data
+                badge_id = badge_upload.form.badge_id.data
+                artwork_file = badge_upload.form.artwork_file.data
 
                 badge = Badge.query.get(int(badge_id))
                 if not badge:
@@ -387,8 +387,8 @@ def call_for_artists():
                     return redirect(url_for("main.call_for_artists"))
 
                 # Handle artwork file
-                if badge_upload.cached_file_path.data:
-                    unique_filename = os.path.basename(badge_upload.cached_file_path.data)
+                if badge_upload.form.cached_file_path.data:
+                    unique_filename = os.path.basename(badge_upload.form.cached_file_path.data)
                 else:
                     unique_filename = None  # Or handle accordingly
 

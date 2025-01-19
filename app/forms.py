@@ -21,7 +21,7 @@ def file_size_limit(max_size_mb):
     return _file_size_limit
 
 
-class BadgeUploadForm(Form):
+class BadgeUploadForm(FlaskForm):
     badge_id = SelectField(
         "Select a Badge",
         coerce=int,
@@ -46,6 +46,7 @@ class BadgeUploadForm(Form):
         """
         if not field.data and not form.cached_file_path.data:
             raise ValidationError("Please upload your artwork file.")
+
 class ArtistSubmissionForm(FlaskForm):  # Form corrections and updates
     name = StringField(
         "Name",

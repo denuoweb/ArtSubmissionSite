@@ -132,29 +132,26 @@
 
     <!-- Badge Design Information -->
     <div id="badgeUploadContainer">
-        {% for badge_upload in form.badge_uploads.entries %}
+        {% for badge_upload in form.badge_uploads %}
             <fieldset class="badge-upload-unit border p-3 mb-3">
                 <legend>Badge Upload {{ loop.index }}</legend>
                 <div class="mb-3">
-                    <label for="badge_uploads-{{ loop.index0 }}-badge_id">Select a Badge</label>
-                    {{ badge_upload.badge_id(class_="form-select", id="badge_uploads-{{ loop.index0 }}-badge_id") }}
-                    <div class="invalid-feedback" id="badge_uploads-{{ loop.index0 }}-badge_id-error">Please select a badge.</div>
+                    <label for="{{ badge_upload.form.badge_id.id }}">Select a Badge</label>
+                    {{ badge_upload.form.badge_id(class_="form-select", id=badge_upload.form.badge_id.id) }}
+                    <div class="invalid-feedback" id="{{ badge_upload.form.badge_id.id }}-error">Please select a badge.</div>
                 </div>
                 <div class="mb-3">
-                    <label for="badge_uploads-{{ loop.index0 }}-artwork_file">Upload Artwork</label>
-                    <input 
-                        type="file" 
-                        class="form-control" 
-                        id="badge_uploads-{{ loop.index0 }}-artwork_file" 
-                        name="badge_uploads-{{ loop.index0 }}-artwork_file" 
-                        accept=".jpg,.jpeg,.png,.svg" 
-                        {% if badge_upload.cached_file_path.data %}data-existing="{{ badge_upload.cached_file_path.data }}"{% endif %}>
-                    {{ badge_upload.cached_file_path() }}  <!-- Hidden field -->
-                    <div class="invalid-feedback" id="badge_uploads-{{ loop.index0 }}-artwork_file-error">Please upload your artwork file.</div>
-                    {% if badge_upload.cached_file_path.data %}
-                        <p class="existing-file">Previously uploaded: {{ badge_upload.cached_file_path.data }}</p>
+                    <label for="{{ badge_upload.form.artwork_file.id }}">Upload Artwork</label>
+                    {{ badge_upload.form.artwork_file(class_="form-control", id=badge_upload.form.artwork_file.id, accept=".jpg,.jpeg,.png,.svg") }}
+                    {{ badge_upload.form.cached_file_path() }}  <!-- Hidden field -->
+                    <div class="invalid-feedback" id="{{ badge_upload.form.artwork_file.id }}-error">Please upload your artwork file.</div>
+                    {% if badge_upload.form.cached_file_path.data %}
+                        <p class="existing-file">Previously uploaded: {{ badge_upload.form.cached_file_path.data }}</p>
                     {% endif %}
                 </div>
+                {% if loop.index > 1 %}
+                    <button type="button" class="btn btn-danger btn-sm removeBadgeUpload">Remove</button>
+                {% endif %}
             </fieldset>
         {% endfor %}
     </div>

@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const emailErrorContainer = document.getElementById("email-error");
 
     let emailIsValid = false;
+    let badgeUploadCounter = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
 
     if (!emailField || !form) {
         console.error("Required elements (email field or form) are missing.");
@@ -153,31 +154,66 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function renumberBadgeUploads() {
+        const badgeUploads = badgeUploadContainer.querySelectorAll(".badge-upload-unit");
+        badgeUploads.forEach((upload, index) => {
+            const legend = upload.querySelector("legend");
+            if (legend) {
+                legend.textContent = `Badge Upload ${index + 1}`;
+            }
+
+            // Handle the visibility of the "Remove" button
+            const removeBtn = upload.querySelector(".removeBadgeUpload");
+            if (index === 0) {
+                // First badge upload should not have a remove button
+                if (removeBtn) {
+                    removeBtn.remove();
+                }
+            } else {
+                // Ensure that other badge uploads have the remove button
+                if (!removeBtn) {
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "btn btn-danger btn-sm removeBadgeUpload";
+                    button.textContent = "Remove";
+                    upload.appendChild(button);
+
+                    // Add event listener to the new remove button
+                    button.addEventListener("click", () => {
+                        badgeUploadContainer.removeChild(upload);
+                        renumberBadgeUploads();
+                        updateAddBadgeButton();
+                    });
+                }
+            }
+        });
+    }
+
     function addBadgeUpload() {
         const currentUploads = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
         if (currentUploads >= maxBadgeUploads) return;
 
-        const index = currentUploads;
+        const uniqueIndex = badgeUploadCounter++;
         const newBadgeUpload = document.createElement("fieldset");
         newBadgeUpload.classList.add("badge-upload-unit", "border", "p-3", "mb-3");
 
-        const badgeIdName = `badge_uploads-${index}-badge_id`;
-        const artworkFileName = `badge_uploads-${index}-artwork_file`;
-        const cachedFilePathName = `badge_uploads-${index}-cached_file_path`;  // Hidden field
+        const badgeIdName = `badge_uploads-${uniqueIndex}-badge_id`;
+        const artworkFileName = `badge_uploads-${uniqueIndex}-artwork_file`;
+        const cachedFilePathName = `badge_uploads-${uniqueIndex}-cached_file_path`;  // Hidden field
 
         newBadgeUpload.innerHTML = `
-            <legend>Badge Upload ${index + 1}</legend>
+            <legend>Badge Upload</legend>
             <div class="mb-3">
                 <label for="${badgeIdName}">Select a Badge</label>
-                <select class="form-select" id="${badgeIdName}" name="${badgeIdName}" required>
+                <select class="form-select" id="${badgeIdName}" name="badge_uploads-${uniqueIndex}-badge_id" required>
                     <option value="" disabled selected>Select a Badge</option>
                 </select>
-                <p class="text-danger small" id="${badgeIdName}-error"></p>
+                <div class="invalid-feedback" id="${badgeIdName}-error">Please select a badge.</div>
             </div>
             <div class="mb-3">
                 <label for="${artworkFileName}">Upload Artwork</label>
-                <input type="file" class="form-control" id="${artworkFileName}" name="${artworkFileName}" accept=".jpg,.jpeg,.png,.svg" required>
-                <p class="text-danger small" id="${artworkFileName}-error"></p>
+                <input type="file" class="form-control" id="${artworkFileName}" name="badge_uploads-${uniqueIndex}-artwork_file" accept=".jpg,.jpeg,.png,.svg" required>
+                <div class="invalid-feedback" id="${artworkFileName}-error">Please upload your artwork file.</div>
                 <input type="hidden" name="${cachedFilePathName}" value="">
             </div>
             <button type="button" class="btn btn-danger btn-sm removeBadgeUpload">Remove</button>
@@ -187,21 +223,24 @@ document.addEventListener("DOMContentLoaded", () => {
         const badgeSelect = document.getElementById(badgeIdName);
         fetchAndPopulateBadgeDropdown(badgeSelect);
 
+        // Add event listener to the remove button
         newBadgeUpload.querySelector(".removeBadgeUpload").addEventListener("click", () => {
             badgeUploadContainer.removeChild(newBadgeUpload);
+            renumberBadgeUploads();
             updateAddBadgeButton();
-
-            if (badgeUploadContainer.querySelectorAll(".badge-upload-unit").length === 0) {
-                addBadgeUpload();
-            }
         });
 
+        renumberBadgeUploads();
         updateAddBadgeButton();
     }
 
     // Initialize badge uploads
     if (badgeUploadContainer.querySelectorAll(".badge-upload-unit").length === 0) {
         addBadgeUpload();
+    } else {
+        // Update the badgeUploadCounter to prevent index duplication
+        badgeUploadCounter = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
+        renumberBadgeUploads();
     }
 
     addBadgeBtn.addEventListener("click", addBadgeUpload);
