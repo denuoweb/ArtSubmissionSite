@@ -40,12 +40,9 @@ class BadgeUploadForm(FlaskForm):
     cached_file_path = HiddenField('Cached File Path')
 
     def validate_artwork_file(form, field):
-        """
-        Custom validator to ensure that artwork_file is provided
-        only if there's no existing cached_file_path.
-        """
         if not field.data and not form.cached_file_path.data:
-            raise ValidationError("Please upload your artwork file.")
+            raise ValidationError('Please upload your artwork file or ensure a cached file is present.')
+
 
 class ArtistSubmissionForm(FlaskForm):  # Form corrections and updates
     name = StringField(
@@ -144,6 +141,16 @@ class ArtistSubmissionForm(FlaskForm):  # Form corrections and updates
         default=False
     )
     submit = SubmitField("Submit")
+
+    def validate_badge_uploads(form, field):
+        # Ensure that at least one badge upload is present
+        if len(field.entries) < 1:
+            raise ValidationError('At least one badge upload is required.')
+
+        # Additional validation: Ensure no duplicate badges
+        badge_ids = [entry.form.badge_id.data for entry in field.entries]
+        if len(badge_ids) != len(set(badge_ids)):
+            raise ValidationError('Duplicate badges selected. Please select unique badges for each upload.')
 
 
 class YouthArtistSubmissionForm(FlaskForm):
