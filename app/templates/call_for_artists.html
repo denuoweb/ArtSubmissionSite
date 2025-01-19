@@ -142,7 +142,14 @@
                 </div>
                 <div class="mb-3">
                     <label for="{{ badge_upload.form.artwork_file.id }}">Upload Artwork</label>
-                    {{ badge_upload.form.artwork_file(class_="form-control", id=badge_upload.form.artwork_file.id, accept=".jpg,.jpeg,.png,.svg") }}
+                    <input 
+                        type="file" 
+                        class="form-control" 
+                        id="{{ badge_upload.form.artwork_file.id }}" 
+                        name="{{ badge_upload.form.artwork_file.name }}" 
+                        accept=".jpg,.jpeg,.png,.svg" 
+                        data-existing="{{ badge_upload.form.cached_file_path.data }}" 
+                        {% if not loop.first and not badge_upload.form.cached_file_path.data %}required{% endif %}>
                     {{ badge_upload.form.cached_file_path() }}  <!-- Hidden field -->
                     <div class="invalid-feedback" id="{{ badge_upload.form.artwork_file.id }}-error">Please upload your artwork file.</div>
                     {% if badge_upload.form.cached_file_path.data %}
@@ -150,7 +157,7 @@
                     {% endif %}
                 </div>
                 {% if loop.index > 1 %}
-                    <button type="button" class="btn btn-danger btn-sm removeBadgeUpload">Remove</button>
+                    <button type="button" class="btn btn-danger btn-sm removeBadgeUpload" data-file-path="{{ badge_upload.form.cached_file_path.data }}">Remove</button>
                 {% endif %}
             </fieldset>
         {% endfor %}

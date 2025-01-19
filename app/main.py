@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, render_template, request, redirect, flash, session, abort, make_response, current_app
-from flask_wtf.csrf import generate_csrf, validate_csrf
+from flask_wtf.csrf import generate_csrf, validate_csrf, CSRFError
 from flask_login import login_required, current_user
 from app.auth import judges
 from app.admin import is_submission_open
@@ -10,6 +10,7 @@ from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from urllib.parse import urlparse
 from app.utils import custom_url_for as url_for
+from functools import wraps
 
 import os
 import uuid
@@ -20,6 +21,56 @@ logger = logging.getLogger(__name__)
 
 main_bp = Blueprint('main', __name__)
 
+
+def csrf_exempt_route(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            validate_csrf(request.headers.get('X-CSRFToken'))
+        except CSRFError as e:
+            return jsonify({'success': False, 'message': 'CSRF token missing or invalid.'}), 400
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+@main_bp.route("/delete_cached_image", methods=["POST"])
+@csrf_exempt_route
+def delete_cached_image():
+    data = request.get_json()
+    if not data or 'file_path' not in data:
+        logger.warning("Delete cached image request missing 'file_path'.")
+        return jsonify({'success': False, 'message': 'Invalid request data.'}), 400
+
+    file_path = data['file_path']
+    logger.debug(f"Attempting to delete file: {file_path}")
+
+    # Security check: Ensure the file is within the upload directory
+    upload_folder = current_app.config.get("UPLOAD_FOLDER")
+    if not upload_folder:
+        logger.error("UPLOAD_FOLDER not configured.")
+        return jsonify({'success': False, 'message': 'Server configuration error.'}), 500
+
+    # Resolve the absolute path
+    absolute_file_path = os.path.abspath(file_path)
+
+    # Ensure the file is within the upload directory
+    if not absolute_file_path.startswith(os.path.abspath(upload_folder)):
+        logger.warning(f"Attempted to delete a file outside the upload directory: {absolute_file_path}")
+        return jsonify({'success': False, 'message': 'Unauthorized file path.'}), 403
+
+    # Check if the file exists
+    if not os.path.exists(absolute_file_path):
+        logger.warning(f"File not found: {absolute_file_path}")
+        return jsonify({'success': False, 'message': 'File does not exist.'}), 404
+
+    try:
+        os.remove(absolute_file_path)
+        logger.info(f"Deleted cached image: {absolute_file_path}")
+        return jsonify({'success': True, 'message': 'File deleted successfully.'}), 200
+    except Exception as e:
+        logger.error(f"Error deleting file {absolute_file_path}: {e}")
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'message': 'Failed to delete the file.'}), 500
 
 @main_bp.route("/")
 def index():
@@ -436,7 +487,6 @@ def call_for_artists():
         application_root=application_root,
         submission_period=submission_period  # Pass the submission period object
     )
-
 
 @main_bp.route("/call_for_youth_artists", methods=["GET", "POST"])
 def call_for_youth_artists():

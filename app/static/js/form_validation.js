@@ -1,4 +1,9 @@
+// static/js/form_validation.js
+
 document.addEventListener("DOMContentLoaded", () => {
+    // URL for deleting cached images, passed from the server
+    const deleteCachedImageUrl = window.deleteCachedImageUrl || '/delete_cached_image';
+    
     const maxBadgeUploads = 3;
     const addBadgeBtn = document.getElementById("addBadgeUpload");
     const badgeUploadContainer = document.getElementById("badgeUploadContainer");
@@ -117,7 +122,8 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             // If the form is invalid, display a general error message
             if (!generalError) {
-                displayFormError("Please correct the highlighted errors before submitting the form.");
+                // If displayFormError is undefined, use an alert instead
+                alert("Please correct the highlighted errors before submitting the form.");
             }
         }
     });
@@ -162,29 +168,47 @@ document.addEventListener("DOMContentLoaded", () => {
                 legend.textContent = `Badge Upload ${index + 1}`;
             }
 
-            // Handle the visibility of the "Remove" button
-            const removeBtn = upload.querySelector(".removeBadgeUpload");
-            if (index === 0) {
-                // First badge upload should not have a remove button
-                if (removeBtn) {
-                    removeBtn.remove();
+            // Update badge_id field
+            const badgeSelect = upload.querySelector("select[name^='badge_uploads-'][name$='-badge_id']");
+            if (badgeSelect) {
+                badgeSelect.name = `badge_uploads-${index}-badge_id`;
+                badgeSelect.id = `badge_uploads-${index}-badge_id`;
+                // Update corresponding error container
+                const badgeError = upload.querySelector(`#badge_uploads-${index}-badge_id-error`);
+                if (badgeError) {
+                    badgeError.id = `badge_uploads-${index}-badge_id-error`;
                 }
-            } else {
-                // Ensure that other badge uploads have the remove button
-                if (!removeBtn) {
-                    const button = document.createElement("button");
-                    button.type = "button";
-                    button.className = "btn btn-danger btn-sm removeBadgeUpload";
-                    button.textContent = "Remove";
-                    upload.appendChild(button);
+            }
 
-                    // Add event listener to the new remove button
-                    button.addEventListener("click", () => {
-                        badgeUploadContainer.removeChild(upload);
-                        renumberBadgeUploads();
-                        updateAddBadgeButton();
-                    });
+            // Update artwork_file field
+            const artworkInput = upload.querySelector("input[type='file'][name^='badge_uploads-'][name$='-artwork_file']");
+            if (artworkInput) {
+                artworkInput.name = `badge_uploads-${index}-artwork_file`;
+                artworkInput.id = `badge_uploads-${index}-artwork_file`;
+                // Update corresponding error container
+                const artworkError = upload.querySelector(`#badge_uploads-${index}-artwork_file-error`);
+                if (artworkError) {
+                    artworkError.id = `badge_uploads-${index}-artwork_file-error`;
                 }
+            }
+
+            // Update cached_file_path hidden field
+            const cachedInput = upload.querySelector("input[type='hidden'][name^='badge_uploads-'][name$='-cached_file_path']");
+            if (cachedInput) {
+                cachedInput.name = `badge_uploads-${index}-cached_file_path`;
+            }
+
+            // Update data-existing attribute on artwork file input
+            if (artworkInput && cachedInput) {
+                const existingFilePath = cachedInput.value;
+                artworkInput.setAttribute('data-existing', existingFilePath);
+            }
+
+            // Update "Remove" button's data-file-path attribute
+            const removeBtn = upload.querySelector(".removeBadgeUpload");
+            if (removeBtn && cachedInput) {
+                const filePath = cachedInput.value || "";
+                removeBtn.setAttribute('data-file-path', filePath);
             }
         });
     }
@@ -212,27 +236,66 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
             <div class="mb-3">
                 <label for="${artworkFileName}">Upload Artwork</label>
-                <input type="file" class="form-control" id="${artworkFileName}" name="badge_uploads-${uniqueIndex}-artwork_file" accept=".jpg,.jpeg,.png,.svg" required>
+                <input type="file" class="form-control" id="${artworkFileName}" name="badge_uploads-${uniqueIndex}-artwork_file" accept=".jpg,.jpeg,.png,.svg" data-existing="">
                 <div class="invalid-feedback" id="${artworkFileName}-error">Please upload your artwork file.</div>
                 <input type="hidden" name="${cachedFilePathName}" value="">
             </div>
-            <button type="button" class="btn btn-danger btn-sm removeBadgeUpload">Remove</button>
+            <button type="button" class="btn btn-danger btn-sm removeBadgeUpload" data-file-path="">Remove</button>
         `;
         badgeUploadContainer.appendChild(newBadgeUpload);
 
         const badgeSelect = document.getElementById(badgeIdName);
         fetchAndPopulateBadgeDropdown(badgeSelect);
 
-        // Add event listener to the remove button
-        newBadgeUpload.querySelector(".removeBadgeUpload").addEventListener("click", () => {
-            badgeUploadContainer.removeChild(newBadgeUpload);
-            renumberBadgeUploads();
-            updateAddBadgeButton();
-        });
-
         renumberBadgeUploads();
         updateAddBadgeButton();
     }
+
+    // Event delegation for "Remove" buttons
+    badgeUploadContainer.addEventListener("click", async (event) => {
+        if (event.target && event.target.matches(".removeBadgeUpload")) {
+            const button = event.target;
+            const badgeUploadUnit = button.closest(".badge-upload-unit");
+            const cachedFilePath = button.getAttribute('data-file-path') || badgeUploadUnit.querySelector('input[type="file"]').getAttribute('data-existing') || badgeUploadUnit.querySelector('input[type="hidden"]').value;
+
+            if (cachedFilePath) {
+                const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+                try {
+                    const response = await fetch(deleteCachedImageUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify({ file_path: cachedFilePath })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Server returned ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    if (result.success) {
+                        // Successfully deleted the file, remove the fieldset
+                        badgeUploadContainer.removeChild(badgeUploadUnit);
+                        renumberBadgeUploads();
+                        updateAddBadgeButton();
+                        alert("Badge upload removed successfully.");
+                    } else {
+                        throw new Error(result.message || "Failed to delete the file.");
+                    }
+                } catch (error) {
+                    console.error("Error deleting cached image:", error);
+                    alert("An error occurred while removing the badge upload. Please try again.");
+                }
+            } else {
+                // No cached file, simply remove the fieldset
+                badgeUploadContainer.removeChild(badgeUploadUnit);
+                renumberBadgeUploads();
+                updateAddBadgeButton();
+            }
+        }
+    });
 
     // Initialize badge uploads
     if (badgeUploadContainer.querySelectorAll(".badge-upload-unit").length === 0) {
