@@ -430,6 +430,10 @@ def call_for_artists():
                 badge_id = badge_upload.form.badge_id.data
                 artwork_file = badge_upload.form.artwork_file.data
 
+                # Find the highest current instance number for this badge and submission
+                max_instance = db.session.query(db.func.max(BadgeArtwork.instance)).filter_by(submission_id=submission.id, badge_id=badge_id).scalar() or 0
+                new_instance = max_instance + 1
+
                 badge = Badge.query.get(int(badge_id))
                 if not badge:
                     logger.error(f"Invalid badge ID: {badge_id}")
@@ -447,6 +451,7 @@ def call_for_artists():
                 badge_artwork = BadgeArtwork(
                     submission_id=submission.id,
                     badge_id=int(badge_id),
+                    instance=new_instance,
                     artwork_file=unique_filename
                 )
                 db.session.add(badge_artwork)

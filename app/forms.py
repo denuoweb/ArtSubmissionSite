@@ -147,11 +147,6 @@ class ArtistSubmissionForm(FlaskForm):  # Form corrections and updates
         if len(field.entries) < 1:
             raise ValidationError('At least one badge upload is required.')
 
-        # Additional validation: Ensure no duplicate badges
-        badge_ids = [entry.form.badge_id.data for entry in field.entries]
-        if len(badge_ids) != len(set(badge_ids)):
-            raise ValidationError('Duplicate badges selected. Please select unique badges for each upload.')
-
     def validate_phone_number(self, field):
         phone = field.data.strip()
         # Check allowed characters

@@ -66,6 +66,7 @@ class BadgeArtwork(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     submission_id = db.Column(db.Integer, db.ForeignKey('artist_submission.id', ondelete='CASCADE'), nullable=False)
     badge_id = db.Column(db.Integer, db.ForeignKey('badge.id', ondelete='CASCADE'), nullable=False)
+    instance = db.Column(db.Integer, nullable=False, default=0)
     artwork_file = db.Column(db.String(255), nullable=False)  # File path for the artwork
     __table_args__ = (db.UniqueConstraint('submission_id', 'badge_id', name='unique_submission_badge'),)
     
