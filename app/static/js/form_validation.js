@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function checkEmailAvailability(email) {
         try {
             const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-            const response = await fetch(`/api/check-email`, {  // Adjusted to relative path
+            const response = await fetch(`${basePath}/api/check-email`, {  // Adjusted to relative path
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -190,7 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Function to populate badge dropdown and preserve existing selection
     async function fetchAndPopulateBadgeDropdown(selectElement) {
         try {
-            const response = await fetch(`/api/badges`);  // Adjusted to relative path
+            const response = await fetch(`${basePath}/api/badges`);  // Adjusted to relative path
 
             if (!response.ok) {
                 throw new Error(`Server returned ${response.status}`);
