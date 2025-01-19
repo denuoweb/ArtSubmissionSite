@@ -33,6 +33,11 @@ def csrf_exempt_route(f):
     return decorated_function
 
 
+@main_bp.route('/refresh_csrf', methods=['GET'])
+def refresh_csrf():
+    return jsonify({'csrf_token': generate_csrf()})
+
+
 @main_bp.route("/delete_cached_image", methods=["POST"])
 @csrf_exempt_route
 def delete_cached_image():
