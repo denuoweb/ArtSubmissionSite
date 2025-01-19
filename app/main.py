@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, render_template, request, redirect, flash, session, abort, make_response, current_app
-from flask_wtf.csrf import generate_csrf
+from flask_wtf.csrf import generate_csrf, validate_csrf
 from flask_login import login_required, current_user
 from app.auth import judges
 from app.admin import is_submission_open
@@ -267,8 +267,6 @@ def call_for_artists():
         badge_upload.badge_id.choices = badge_choices
     logger.debug("Badge choices populated in form.")
 
-    previous_badge_data = []
-
     if request.method == "POST":
         logger.debug("POST request received.")
         if not submission_open and not is_admin:
@@ -288,27 +286,58 @@ def call_for_artists():
                 submission_open=submission_open,
                 submission_status=submission_status,
                 submission_deadline=submission_deadline,
-                previous_badge_data=previous_badge_data,
                 is_admin=is_admin
             )
 
         try:
-            # Validate and prepare submission
+            # Process each badge upload entry
             for badge_upload in form.badge_uploads.entries:
                 badge_id = badge_upload.badge_id.data
                 artwork_file = badge_upload.artwork_file.data
 
                 logger.debug(f"Badge ID: {badge_id}, Artwork File: {artwork_file}")
 
-                # Ensure badge ID and artwork file are provided
-                if not badge_id or (not artwork_file and not badge_upload.artwork_file.data):
-                    flash("Please provide both badge and artwork file.", "danger")
-                    return redirect(url_for("main.call_for_artists"))
+                # Check if a new file has been uploaded
+                if not artwork_file or not hasattr(artwork_file, "filename") or not artwork_file.filename.strip():
+                    # Attempt to use the cached file path
+                    cached_file_path = badge_upload.cached_file_path.data  # Access the hidden field
+                    if cached_file_path and os.path.exists(cached_file_path):
+                        logger.debug(f"Using cached file for badge {badge_id}: {cached_file_path}")
+                        continue  # No action needed; cached file is already associated
+                    else:
+                        flash("Missing artwork file. Please re-upload.", "danger")
+                        return render_template(
+                            "call_for_artists.html",
+                            form=form,
+                            badges=badges,
+                            submission_open=submission_open,
+                            submission_status=submission_status,
+                            submission_deadline=submission_deadline,
+                            is_admin=is_admin
+                        )
 
-                filename = artwork_file.filename if hasattr(artwork_file, "filename") else "No file"
-                previous_badge_data.append({"badge_id": badge_id, "artwork_file": filename})
-            logger.debug(f"Previous badge data: {previous_badge_data}")
+                # Process the newly uploaded file
+                if hasattr(artwork_file, "filename"):
+                    file_ext = os.path.splitext(artwork_file.filename)[1].lower()
+                    if file_ext not in ['.jpg', '.jpeg', '.png', '.svg']:
+                        flash("Invalid file extension.", "danger")
+                        return render_template(
+                            "call_for_artists.html",
+                            form=form,
+                            badges=badges,
+                            submission_open=submission_open,
+                            submission_status=submission_status,
+                            submission_deadline=submission_deadline,
+                            is_admin=is_admin
+                        )
 
+                    unique_filename = f"{uuid.uuid4()}{file_ext}"
+                    artwork_path = os.path.join(current_app.config["UPLOAD_FOLDER"], unique_filename)
+                    artwork_file.save(artwork_path)
+                    logger.debug(f"File saved: {artwork_path}")
+                    badge_upload.cached_file_path.data = artwork_path  # Update the cached_file_path
+
+            # Validate the form after processing file uploads
             if not form.validate_on_submit():
                 logger.debug("Form validation failed.")
                 for field_name, errors in form.errors.items():
@@ -322,7 +351,6 @@ def call_for_artists():
                     submission_open=submission_open,
                     submission_status=submission_status,
                     submission_deadline=submission_deadline,
-                    previous_badge_data=previous_badge_data,
                     is_admin=is_admin
                 )
 
@@ -359,20 +387,10 @@ def call_for_artists():
                     return redirect(url_for("main.call_for_artists"))
 
                 # Handle artwork file
-                if hasattr(artwork_file, "filename"):
-                    file_ext = os.path.splitext(artwork_file.filename)[1]
-                    if not file_ext:
-                        logger.error(f"Invalid file extension for file: {artwork_file.filename}")
-                        flash("Invalid file extension for uploaded file.", "danger")
-                        db.session.rollback()
-                        return redirect(url_for("main.call_for_artists"))
-
-                    unique_filename = f"{uuid.uuid4()}{file_ext}"
-                    artwork_path = os.path.join(current_app.config["UPLOAD_FOLDER"], unique_filename)
-                    artwork_file.save(artwork_path)
-                    logger.debug(f"File saved to: {artwork_path}")
+                if badge_upload.cached_file_path.data:
+                    unique_filename = os.path.basename(badge_upload.cached_file_path.data)
                 else:
-                    unique_filename = artwork_file  # Pre-uploaded or directly set
+                    unique_filename = None  # Or handle accordingly
 
                 # Save badge artwork
                 badge_artwork = BadgeArtwork(
@@ -394,8 +412,19 @@ def call_for_artists():
             db.session.rollback()
             logger.error(f"Error during submission process: {e}")
             logger.error(traceback.format_exc())
-            flash("An error occurred while processing your submission. Please try again.", "danger")
 
+            flash("An error occurred while processing your submission. Please try again.", "danger")
+            return render_template(
+                "call_for_artists.html",
+                form=form,
+                badges=badges,
+                submission_open=submission_open,
+                submission_status=submission_status,
+                submission_deadline=submission_deadline,
+                is_admin=is_admin
+            )
+
+    # GET request
     return render_template(
         "call_for_artists.html",
         form=form,
@@ -403,7 +432,6 @@ def call_for_artists():
         submission_open=submission_open,
         submission_status=submission_status,
         submission_deadline=submission_deadline,
-        previous_badge_data=previous_badge_data,
         is_admin=is_admin,
         application_root=application_root,
         submission_period=submission_period  # Pass the submission period object
@@ -574,34 +602,23 @@ def api_badges():
     ])
 
 
+
 @main_bp.route("/api/check-email", methods=["POST"])
 def check_email():
-    """
-    API endpoint to check if an email is already used in the database.
-    Includes console print statements for debugging.
-    """
-
     try:
-        # Parse JSON payload
+        # Validate CSRF token
+        csrf_token = request.headers.get("X-CSRFToken")
+        validate_csrf(csrf_token)
+
+        # Parse the JSON request body
         data = request.get_json()
-
-        # Validate payload
-        if not data:
-            return jsonify({"error": "Invalid request: No data provided"}), 400
-
-        # Extract email field
-        email = data.get("email", "").strip()
+        email = data.get("email")
 
         if not email:
             return jsonify({"error": "Email is required"}), 400
 
-        # Query the database for the email
-        existing_submission = ArtistSubmission.query.filter_by(email=email).first()
-
-        if existing_submission:
-            return jsonify({"isAvailable": False}), 200
-
-        return jsonify({"isAvailable": True}), 200
-
+        # Check if the email exists in the database
+        is_available = ArtistSubmission.query.filter_by(email=email).first() is None
+        return jsonify({"isAvailable": is_available})
     except Exception as e:
-        return jsonify({"error": "Internal server error"}), 500
+        return jsonify({"error": str(e)}), 500

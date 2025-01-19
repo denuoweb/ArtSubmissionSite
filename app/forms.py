@@ -21,7 +21,7 @@ def file_size_limit(max_size_mb):
     return _file_size_limit
 
 
-class BadgeUploadForm(FlaskForm):
+class BadgeUploadForm(Form):
     badge_id = SelectField(
         "Select a Badge",
         coerce=int,
@@ -30,7 +30,6 @@ class BadgeUploadForm(FlaskForm):
     artwork_file = FileField(
         "Upload Artwork",
         validators=[
-            DataRequired(message="Please upload your artwork file."),
             FileAllowed(
                 ["jpg", "jpeg", "png", "svg"],
                 message="Only JPG, JPEG, PNG, or SVG files are allowed."
@@ -38,8 +37,15 @@ class BadgeUploadForm(FlaskForm):
             file_size_limit(8)  # Limit file size to 8 MB
         ],
     )
+    cached_file_path = HiddenField('Cached File Path')
 
-
+    def validate_artwork_file(form, field):
+        """
+        Custom validator to ensure that artwork_file is provided
+        only if there's no existing cached_file_path.
+        """
+        if not field.data and not form.cached_file_path.data:
+            raise ValidationError("Please upload your artwork file.")
 class ArtistSubmissionForm(FlaskForm):  # Form corrections and updates
     name = StringField(
         "Name",
@@ -61,7 +67,7 @@ class ArtistSubmissionForm(FlaskForm):  # Form corrections and updates
         "Phone Number",
         validators=[
             Optional(),
-            Length(max=15, message="Phone number cannot exceed 15 digits."),
+            Length(min=10, max=15, message="Phone number must be 10 to 15 digits."),
             Regexp(r'^[0-9\s\-()]+$', message="Phone number must contain only digits, spaces, hyphens, or parentheses.")
         ],
         render_kw={"placeholder": "Enter your phone number"}

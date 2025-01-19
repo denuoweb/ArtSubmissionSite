@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function checkEmailAvailability(email) {
         try {
             const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-            const response = await fetch(`${basePath}/api/check-email`, {
+            const response = await fetch(`/api/check-email`, {  // Adjusted to relative path
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -31,25 +31,27 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             if (!response.ok) {
+                console.error(`Server returned ${response.status}: ${response.statusText}`);
                 throw new Error("Server error");
             }
 
             const result = await response.json();
             return result.isAvailable;
         } catch (error) {
-            console.error("Error checking email availability:", error);
-            return false;
+            console.error("Error checking email availability:", error.message);
+            alert("Unable to verify email at this time. Please try again later.");
+            return false; // Assume email is unavailable if an error occurs
         }
     }
 
-    emailField.addEventListener("blur", async () => {
+    async function validateEmail() {
         const email = emailField.value.trim();
 
         if (!validateEmailFormat(email)) {
             emailErrorContainer.textContent = "Invalid email format.";
             emailErrorContainer.style.display = "block";
             emailIsValid = false;
-            return;
+            return false;
         }
 
         const isAvailable = await checkEmailAvailability(email);
@@ -57,21 +59,65 @@ document.addEventListener("DOMContentLoaded", () => {
             emailErrorContainer.textContent = "This email is already in use.";
             emailErrorContainer.style.display = "block";
             emailIsValid = false;
+            return false;
         } else {
             emailErrorContainer.textContent = "";
             emailErrorContainer.style.display = "none";
             emailIsValid = true;
         }
-    });
+        return true;
+    }
 
-    const fileInputs = document.querySelectorAll("input[type='file'][data-existing]");
-    fileInputs.forEach(input => {
-        const existingFile = input.dataset.existing;
-        if (existingFile) {
-            const fileLabel = document.createElement("p");
-            fileLabel.className = "existing-file";
-            fileLabel.textContent = `Previously uploaded: ${existingFile}`;
-            input.parentNode.insertBefore(fileLabel, input);
+    // Trigger email validation on blur
+    emailField.addEventListener("blur", validateEmail);
+
+    // Single submit event listener
+    form.addEventListener("submit", async (event) => {
+        let formIsValid = true;
+
+        // Prevent form submission until all validations are complete
+        event.preventDefault();
+
+        // Clear any existing general errors
+        const generalError = document.getElementById("general-error");
+        if (generalError) {
+            generalError.style.display = "none";
+            generalError.textContent = "";
+        }
+
+        // Validate email
+        const emailCheck = await validateEmail();
+        if (!emailCheck) {
+            formIsValid = false;
+            emailField.focus();
+            alert("Invalid email! Please fix the email before submitting.");
+        }
+
+        // Validate required fields
+        const requiredFields = form.querySelectorAll("[required]");
+        requiredFields.forEach(field => {
+            const errorContainer = document.getElementById(`${field.id}-error`);
+            if (!field.checkValidity()) {
+                if (errorContainer) {
+                    errorContainer.textContent = field.validationMessage || "This field is required.";
+                    errorContainer.style.display = "block";
+                }
+                if (formIsValid) field.focus();
+                formIsValid = false;
+            } else if (errorContainer) {
+                errorContainer.textContent = "";
+                errorContainer.style.display = "none";
+            }
+        });
+
+        if (formIsValid) {
+            // All validations passed, submit the form
+            form.submit();
+        } else {
+            // If the form is invalid, display a general error message
+            if (!generalError) {
+                displayFormError("Please correct the highlighted errors before submitting the form.");
+            }
         }
     });
 
@@ -93,23 +139,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchAndPopulateBadgeDropdown(selectElement) {
         try {
-            const response = await fetch(`${basePath}/api/badges`);
+            const response = await fetch(`/api/badges`);  // Adjusted to relative path
 
             if (!response.ok) {
                 throw new Error(`Server returned ${response.status}`);
             }
 
-            const responseText = await response.text();
-
-            try {
-                const badgeData = JSON.parse(responseText);
-                populateBadgeDropdown(selectElement, badgeData);
-            } catch (jsonError) {
-                console.error("Invalid JSON response:", responseText);
-                throw jsonError;
-            }
+            const badgeData = await response.json();  // Assuming the API returns JSON
+            populateBadgeDropdown(selectElement, badgeData);
         } catch (error) {
             console.error("Error fetching badges:", error);
+            alert("Unable to load badge options. Please try again later.");
         }
     }
 
@@ -123,6 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const badgeIdName = `badge_uploads-${index}-badge_id`;
         const artworkFileName = `badge_uploads-${index}-artwork_file`;
+        const cachedFilePathName = `badge_uploads-${index}-cached_file_path`;  // Hidden field
 
         newBadgeUpload.innerHTML = `
             <legend>Badge Upload ${index + 1}</legend>
@@ -137,6 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <label for="${artworkFileName}">Upload Artwork</label>
                 <input type="file" class="form-control" id="${artworkFileName}" name="${artworkFileName}" accept=".jpg,.jpeg,.png,.svg" required>
                 <p class="text-danger small" id="${artworkFileName}-error"></p>
+                <input type="hidden" name="${cachedFilePathName}" value="">
             </div>
             <button type="button" class="btn btn-danger btn-sm removeBadgeUpload">Remove</button>
         `;
@@ -157,44 +199,12 @@ document.addEventListener("DOMContentLoaded", () => {
         updateAddBadgeButton();
     }
 
+    // Initialize badge uploads
     if (badgeUploadContainer.querySelectorAll(".badge-upload-unit").length === 0) {
         addBadgeUpload();
     }
 
     addBadgeBtn.addEventListener("click", addBadgeUpload);
-
-    form.addEventListener("submit", (event) => {
-        let formIsValid = true;
-
-        if (!emailIsValid) {
-            event.preventDefault();
-            emailErrorContainer.textContent = "Please correct the email issues before submitting.";
-            emailErrorContainer.style.display = "block";
-            emailField.focus();
-            alert("Invalid email! Please fix the email before submitting.");
-            formIsValid = false;
-        }
-
-        const requiredFields = form.querySelectorAll("[required]");
-        requiredFields.forEach(field => {
-            const errorContainer = document.getElementById(`${field.id}-error`);
-            if (!field.checkValidity()) {
-                if (errorContainer) {
-                    errorContainer.textContent = field.validationMessage || "This field is required.";
-                    errorContainer.style.display = "block";
-                }
-                if (formIsValid) field.focus();
-                formIsValid = false;
-            } else if (errorContainer) {
-                errorContainer.textContent = "";
-                errorContainer.style.display = "none";
-            }
-        });
-
-        if (!formIsValid) {
-            event.preventDefault();
-        }
-    });
 
     updateAddBadgeButton();
 });
