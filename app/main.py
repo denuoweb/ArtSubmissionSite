@@ -315,7 +315,7 @@ def call_for_artists():
     badges = Badge.query.all()
     logger.debug(f"Retrieved {len(badges)} badges from the database.")
 
-    badge_choices = [(str(badge.id), f"{badge.name}: {badge.description}") for badge in badges]
+    badge_choices = [(str(badge.id), badge.name) for badge in badges]
     for badge_upload in form.badge_uploads.entries:
         badge_upload.form.badge_id.choices = badge_choices
     logger.debug("Badge choices populated in form.")

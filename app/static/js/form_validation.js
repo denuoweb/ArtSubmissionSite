@@ -214,7 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
         badgeData.forEach(badge => {
             const option = document.createElement("option");
             option.value = badge.id;
-            option.textContent = `${badge.name}: ${badge.description}`;
+            option.textContent = badge.name;
             // Preserve selection if the badge ID matches the existing value
             if (badge.id === parseInt(existingValue)) { // Ensure type consistency
                 option.selected = true;
