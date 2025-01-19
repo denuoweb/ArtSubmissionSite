@@ -1,6 +1,7 @@
 // static/js/form_validation.js
 
 document.addEventListener("DOMContentLoaded", () => {
+
     // -------------------------
     // Configuration and Element Selection
     // -------------------------
@@ -143,9 +144,15 @@ document.addEventListener("DOMContentLoaded", () => {
     function validateFileInputs() {
         const fileInputs = form.querySelectorAll("input[type='file'][required]");
         let allValid = true;
-
+    
         fileInputs.forEach(fileInput => {
             const errorContainer = document.getElementById(`${fileInput.id}-error`);
+
+            if (!errorContainer) {
+                console.error("Error container not found for ID:", fileInput.id);
+                return; // Skip further processing for this input
+            }
+            
             // Only validate if there's no existing file path (i.e., no previously uploaded file)
             if (fileInput.files.length === 0 && !fileInput.getAttribute('data-existing')) {
                 errorContainer.textContent = "Please upload your artwork file.";
@@ -160,7 +167,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 fileInput.classList.add("is-valid");
             }
         });
-
+    
         return allValid;
     }
 
@@ -274,6 +281,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 removeBtn.setAttribute('data-file-path', filePath);
             }
         });
+
+    // Inside DOMContentLoaded
+    form.addEventListener("change", (event) => {
+        if (event.target.matches("input[type='file']")) {
+            validateFileInputs();
+        }
+    });
+
     }
 
     // Function to update the "Add Badge Upload" button's state
@@ -307,7 +322,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
             <div class="mb-3">
                 <label for="${artworkFileName}">Upload Artwork</label>
-                <input type="file" class="form-control" id="${artworkFileName}" name="badge_uploads-${uniqueIndex}-artwork_file" accept=".jpg,.jpeg,.png,.svg" data-existing="">
+                <input type="file" class="form-control" id="${artworkFileName}" name="badge_uploads-${uniqueIndex}-artwork_file" accept=".jpg,.jpeg,.png,.svg" data-existing="" required>
                 <div class="invalid-feedback" id="${artworkFileName}-error">Please upload your artwork file.</div>
                 <input type="hidden" name="${cachedFilePathName}" value="">
             </div>
@@ -375,6 +390,34 @@ document.addEventListener("DOMContentLoaded", () => {
                 renumberBadgeUploads();
                 updateAddBadgeButton();
             }
+        }
+    });
+
+    // -------------------------
+    // Form Submission Handling
+    // -------------------------
+    form.addEventListener("submit", async (event) => {
+        // Prevent form submission to perform validations
+        event.preventDefault();
+
+        // Perform all validations
+        const isEmailValid = await validateEmail();
+        const isPhoneValid = validatePhoneNumber();
+        const areFilesValid = validateFileInputs();
+
+        // Add any additional validations as needed
+
+        if (isEmailValid && isPhoneValid && areFilesValid /* && isConsentGiven */) {
+            // All validations passed, submit the form
+            form.submit();
+        } else {
+            // Scroll to the first error for better user experience
+            const firstError = form.querySelector(".is-invalid");
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+            // Optionally, focus the first invalid input
+            firstError?.focus();
         }
     });
 
