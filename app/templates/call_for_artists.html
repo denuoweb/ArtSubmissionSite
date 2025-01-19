@@ -132,14 +132,18 @@
 
     <!-- Badge Design Information -->
     <div id="badgeUploadContainer">
+        
         {% for badge_upload in form.badge_uploads %}
             <fieldset class="badge-upload-unit border p-3 mb-3">
                 <legend>Badge Upload {{ loop.index }}</legend>
-                <div class="mb-3">
-                    <label for="{{ badge_upload.form.badge_id.id }}">Select a Badge</label>
-                    {{ badge_upload.form.badge_id(class_="form-select", id=badge_upload.form.badge_id.id, required=True) }}
-                    <div class="invalid-feedback" id="{{ badge_upload.form.badge_id.id }}-error">Please select a badge.</div>
-                </div>
+
+                <select class="form-select" id="{{ badge_upload.form.badge_id.id }}" name="{{ badge_upload.form.badge_id.name }}" required>
+                    <option value="" disabled {{ 'selected' if not badge_upload.form.badge_id.data }}>Select a Badge</option>
+                    {% for badge in badges %}
+                        <option value="{{ badge.id }}" {{ 'selected' if badge.id == badge_upload.form.badge_id.data }}>{{ badge.name }}</option>
+                    {% endfor %}
+                </select>
+
                 <div class="mb-3">
                     <label for="{{ badge_upload.form.artwork_file.id }}">Upload Artwork</label>
                     <input 
@@ -149,7 +153,7 @@
                         name="{{ badge_upload.form.artwork_file.name }}" 
                         accept=".jpg,.jpeg,.png,.svg" 
                         data-existing="{{ badge_upload.form.cached_file_path.data }}" 
-                        {% if not loop.first and not badge_upload.form.cached_file_path.data %}required{% endif %}>        
+                        {% if not badge_upload.form.cached_file_path.data %}required{% endif %}> 
                     {{ badge_upload.form.cached_file_path() }}  <!-- Hidden field -->
                     <div class="invalid-feedback" id="{{ badge_upload.form.artwork_file.id }}-error">Please upload your artwork file.</div>
                     {% if badge_upload.form.cached_file_path.data %}
