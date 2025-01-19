@@ -137,7 +137,7 @@
                 <legend>Badge Upload {{ loop.index }}</legend>
                 <div class="mb-3">
                     <label for="{{ badge_upload.form.badge_id.id }}">Select a Badge</label>
-                    {{ badge_upload.form.badge_id(class_="form-select", id=badge_upload.form.badge_id.id) }}
+                    {{ badge_upload.form.badge_id(class_="form-select", id=badge_upload.form.badge_id.id, required=True) }}
                     <div class="invalid-feedback" id="{{ badge_upload.form.badge_id.id }}-error">Please select a badge.</div>
                 </div>
                 <div class="mb-3">
@@ -149,8 +149,7 @@
                         name="{{ badge_upload.form.artwork_file.name }}" 
                         accept=".jpg,.jpeg,.png,.svg" 
                         data-existing="{{ badge_upload.form.cached_file_path.data }}" 
-                        {% if not badge_upload.form.cached_file_path.data %}required{% endif %}>
-
+                        {% if not loop.first and not badge_upload.form.cached_file_path.data %}required{% endif %}>        
                     {{ badge_upload.form.cached_file_path() }}  <!-- Hidden field -->
                     <div class="invalid-feedback" id="{{ badge_upload.form.artwork_file.id }}-error">Please upload your artwork file.</div>
                     {% if badge_upload.form.cached_file_path.data %}
