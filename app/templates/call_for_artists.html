@@ -87,7 +87,7 @@
     </div>
     <div class="mb-3">
         <label for="{{ form.phone_number.id }}">{{ form.phone_number.label }}</label>
-        {{ form.phone_number(class_="form-control", id=form.phone_number.id) }}
+        {{ form.phone_number(class_="form-control", id=form.phone_number.id, required=True) }}
         <div class="invalid-feedback" id="phone_number-error"></div>
     </div>
 
@@ -149,7 +149,8 @@
                         name="{{ badge_upload.form.artwork_file.name }}" 
                         accept=".jpg,.jpeg,.png,.svg" 
                         data-existing="{{ badge_upload.form.cached_file_path.data }}" 
-                        {% if not loop.first and not badge_upload.form.cached_file_path.data %}required{% endif %}>
+                        {% if not badge_upload.form.cached_file_path.data %}required{% endif %}>
+
                     {{ badge_upload.form.cached_file_path() }}  <!-- Hidden field -->
                     <div class="invalid-feedback" id="{{ badge_upload.form.artwork_file.id }}-error">Please upload your artwork file.</div>
                     {% if badge_upload.form.cached_file_path.data %}

@@ -152,6 +152,17 @@ class ArtistSubmissionForm(FlaskForm):  # Form corrections and updates
         if len(badge_ids) != len(set(badge_ids)):
             raise ValidationError('Duplicate badges selected. Please select unique badges for each upload.')
 
+    def validate_phone_number(self, field):
+        phone = field.data.strip()
+        # Check allowed characters
+        if not re.fullmatch(r'^[\d\s\-\(\)]+$', phone):
+            raise ValidationError("Phone number can only contain digits, spaces, hyphens, or parentheses.")
+        
+        # Count digits
+        digits = re.sub(r'\D', '', phone)
+        if not (10 <= len(digits) <= 15):
+            raise ValidationError("Phone number must contain between 10 and 15 digits.")
+
 
 class YouthArtistSubmissionForm(FlaskForm):
     # Personal Information

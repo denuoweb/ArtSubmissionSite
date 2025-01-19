@@ -10,6 +10,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("submissionForm");
     const emailField = document.getElementById("email");
     const emailErrorContainer = document.getElementById("email-error");
+    const phoneField = document.getElementById("phone_number");
+    const phoneErrorContainer = document.getElementById("phone_number-error");
+
+    if (phoneField) {
+        phoneField.addEventListener("blur", validatePhoneNumber);
+    }
 
     let emailIsValid = false;
     let badgeUploadCounter = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
@@ -98,6 +104,14 @@ document.addEventListener("DOMContentLoaded", () => {
             emailField.focus();
             alert("Invalid email! Please fix the email before submitting.");
         }
+        
+        // Validate phone number
+        const phoneCheck = validatePhoneNumber();
+        if (!phoneCheck) {
+            formIsValid = false;
+            if (formIsValid) phoneField.focus();
+            alert("Invalid phone number! Please fix the phone number before submitting.");
+        }
 
         // Validate required fields
         const requiredFields = form.querySelectorAll("[required]");
@@ -119,12 +133,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (formIsValid) {
             // All validations passed, submit the form
             form.submit();
-        } else {
-            // If the form is invalid, display a general error message
-            if (!generalError) {
-                // If displayFormError is undefined, use an alert instead
-                alert("Please correct the highlighted errors before submitting the form.");
-            }
         }
     });
 
@@ -310,3 +318,47 @@ document.addEventListener("DOMContentLoaded", () => {
 
     updateAddBadgeButton();
 });
+
+// Function to validate phone number format
+function validatePhoneNumberFormat(phone) {
+    // Allowed characters: digits, spaces, hyphens, parentheses
+    const phoneRegex = /^[\d\s\-\(\)]+$/;
+    return phoneRegex.test(phone);
+}
+
+// Function to count digits in the phone number
+function countDigits(phone) {
+    const digits = phone.replace(/\D/g, '');
+    return digits.length;
+}
+
+// Function to validate the phone number
+function validatePhoneNumber() {
+    const phoneField = document.getElementById("phone_number"); // Adjust ID if different
+    const phoneErrorContainer = document.getElementById("phone_number-error");
+    const phone = phoneField.value.trim();
+
+    // Check format
+    if (!validatePhoneNumberFormat(phone)) {
+        phoneErrorContainer.textContent = "Phone number can only contain digits, spaces, hyphens, or parentheses.";
+        phoneErrorContainer.style.display = "block";
+        phoneField.classList.add("is-invalid");
+        return false;
+    }
+
+    // Check digit count
+    const digitCount = countDigits(phone);
+    if (digitCount < 10 || digitCount > 15) {
+        phoneErrorContainer.textContent = "Phone number must contain between 10 and 15 digits.";
+        phoneErrorContainer.style.display = "block";
+        phoneField.classList.add("is-invalid");
+        return false;
+    }
+
+    // If valid
+    phoneErrorContainer.textContent = "";
+    phoneErrorContainer.style.display = "none";
+    phoneField.classList.remove("is-invalid");
+    phoneField.classList.add("is-valid");
+    return true;
+}
