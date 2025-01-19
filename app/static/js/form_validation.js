@@ -1,9 +1,10 @@
 // static/js/form_validation.js
 
 document.addEventListener("DOMContentLoaded", () => {
-    // URL for deleting cached images, passed from the server
+    // -------------------------
+    // Configuration and Element Selection
+    // -------------------------
     const deleteCachedImageUrl = window.deleteCachedImageUrl || '/delete_cached_image';
-    
     const maxBadgeUploads = 3;
     const addBadgeBtn = document.getElementById("addBadgeUpload");
     const badgeUploadContainer = document.getElementById("badgeUploadContainer");
@@ -13,18 +14,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const phoneField = document.getElementById("phone_number");
     const phoneErrorContainer = document.getElementById("phone_number-error");
 
-    if (phoneField) {
-        phoneField.addEventListener("blur", validatePhoneNumber);
-    }
-
-    let emailIsValid = false;
-    let badgeUploadCounter = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
-
-    if (!emailField || !form) {
-        console.error("Required elements (email field or form) are missing.");
+    // -------------------------
+    // Initial Checks
+    // -------------------------
+    if (!emailField || !form || !addBadgeBtn || !badgeUploadContainer) {
+        console.error("Required elements (email field, form, add badge button, or badge upload container) are missing.");
         return;
     }
 
+    // -------------------------
+    // Email Validation Functions
+    // -------------------------
     function validateEmailFormat(email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
@@ -62,7 +62,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!validateEmailFormat(email)) {
             emailErrorContainer.textContent = "Invalid email format.";
             emailErrorContainer.style.display = "block";
-            emailIsValid = false;
+            emailField.classList.add("is-invalid");
+            emailField.classList.remove("is-valid");
             return false;
         }
 
@@ -70,88 +71,116 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!isAvailable) {
             emailErrorContainer.textContent = "This email is already in use.";
             emailErrorContainer.style.display = "block";
-            emailIsValid = false;
+            emailField.classList.add("is-invalid");
+            emailField.classList.remove("is-valid");
             return false;
         } else {
             emailErrorContainer.textContent = "";
             emailErrorContainer.style.display = "none";
-            emailIsValid = true;
+            emailField.classList.remove("is-invalid");
+            emailField.classList.add("is-valid");
+            return true;
         }
-        return true;
     }
 
     // Trigger email validation on blur
     emailField.addEventListener("blur", validateEmail);
 
-    // Single submit event listener
-    form.addEventListener("submit", async (event) => {
-        let formIsValid = true;
+    // -------------------------
+    // Phone Number Validation Functions
+    // -------------------------
+    function validatePhoneNumberFormat(phone) {
+        // Allowed characters: digits, spaces, hyphens, parentheses
+        const phoneRegex = /^[\d\s\-\(\)]+$/;
+        return phoneRegex.test(phone);
+    }
 
-        // Prevent form submission until all validations are complete
-        event.preventDefault();
+    function countDigits(phone) {
+        const digits = phone.replace(/\D/g, '');
+        return digits.length;
+    }
 
-        // Clear any existing general errors
-        const generalError = document.getElementById("general-error");
-        if (generalError) {
-            generalError.style.display = "none";
-            generalError.textContent = "";
+    function validatePhoneNumber() {
+        if (!phoneField) return true; // If phone field is not present, skip validation
+
+        const phone = phoneField.value.trim();
+
+        // Check format
+        if (!validatePhoneNumberFormat(phone)) {
+            phoneErrorContainer.textContent = "Phone number can only contain digits, spaces, hyphens, or parentheses.";
+            phoneErrorContainer.style.display = "block";
+            phoneField.classList.add("is-invalid");
+            phoneField.classList.remove("is-valid");
+            return false;
         }
 
-        // Validate email
-        const emailCheck = await validateEmail();
-        if (!emailCheck) {
-            formIsValid = false;
-            emailField.focus();
-            alert("Invalid email! Please fix the email before submitting.");
-        }
-        
-        // Validate phone number
-        const phoneCheck = validatePhoneNumber();
-        if (!phoneCheck) {
-            formIsValid = false;
-            if (formIsValid) phoneField.focus();
-            alert("Invalid phone number! Please fix the phone number before submitting.");
+        // Check digit count
+        const digitCount = countDigits(phone);
+        if (digitCount < 10 || digitCount > 15) {
+            phoneErrorContainer.textContent = "Phone number must contain between 10 and 15 digits.";
+            phoneErrorContainer.style.display = "block";
+            phoneField.classList.add("is-invalid");
+            phoneField.classList.remove("is-valid");
+            return false;
         }
 
-        // Validate required fields
-        const requiredFields = form.querySelectorAll("[required]");
-        requiredFields.forEach(field => {
-            const errorContainer = document.getElementById(`${field.id}-error`);
-            if (!field.checkValidity()) {
-                if (errorContainer) {
-                    errorContainer.textContent = field.validationMessage || "This field is required.";
-                    errorContainer.style.display = "block";
-                }
-                if (formIsValid) field.focus();
-                formIsValid = false;
-            } else if (errorContainer) {
+        // If valid
+        phoneErrorContainer.textContent = "";
+        phoneErrorContainer.style.display = "none";
+        phoneField.classList.remove("is-invalid");
+        phoneField.classList.add("is-valid");
+        return true;
+    }
+
+    // Attach phone number validation to blur event
+    if (phoneField) {
+        phoneField.addEventListener("blur", validatePhoneNumber);
+    }
+
+    // -------------------------
+    // File Inputs Validation
+    // -------------------------
+    function validateFileInputs() {
+        const fileInputs = form.querySelectorAll("input[type='file'][required]");
+        let allValid = true;
+
+        fileInputs.forEach(fileInput => {
+            const errorContainer = document.getElementById(`${fileInput.id}-error`);
+            // Only validate if there's no existing file path (i.e., no previously uploaded file)
+            if (fileInput.files.length === 0 && !fileInput.getAttribute('data-existing')) {
+                errorContainer.textContent = "Please upload your artwork file.";
+                errorContainer.style.display = "block";
+                fileInput.classList.add("is-invalid");
+                fileInput.classList.remove("is-valid");
+                allValid = false;
+            } else {
                 errorContainer.textContent = "";
                 errorContainer.style.display = "none";
+                fileInput.classList.remove("is-invalid");
+                fileInput.classList.add("is-valid");
             }
         });
 
-        if (formIsValid) {
-            // All validations passed, submit the form
-            form.submit();
-        }
-    });
-
-    function updateAddBadgeButton() {
-        const currentUploads = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
-        addBadgeBtn.disabled = currentUploads >= maxBadgeUploads;
-        addBadgeBtn.style.display = currentUploads >= maxBadgeUploads ? "none" : "block";
+        return allValid;
     }
 
-    function populateBadgeDropdown(selectElement, badgeData) {
-        selectElement.innerHTML = '<option value="" disabled selected>Select a Badge</option>';
-        badgeData.forEach(badge => {
-            const option = document.createElement("option");
-            option.value = badge.id;
-            option.textContent = `${badge.name}: ${badge.description}`;
-            selectElement.appendChild(option);
+    // -------------------------
+    // Badge Dropdown Management
+    // -------------------------
+    // Function to ensure "Select a Badge" is selected for all dropdowns if no selection exists
+    function ensureSelectBadgeDefault() {
+        const badgeSelects = badgeUploadContainer.querySelectorAll("select[name^='badge_uploads-'][name$='-badge_id']");
+        badgeSelects.forEach(select => {
+            if (!select.value) { // Only set if no value is selected
+                const defaultOption = select.querySelector('option[value=""]');
+                if (defaultOption) {
+                    defaultOption.selected = true;
+                }
+            }
         });
     }
 
+    // Function to populate badge dropdown and preserve existing selection
     async function fetchAndPopulateBadgeDropdown(selectElement) {
         try {
             const response = await fetch(`/api/badges`);  // Adjusted to relative path
@@ -168,6 +197,32 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Function to populate badge dropdown while preserving existing selection
+    function populateBadgeDropdown(selectElement, badgeData) {
+        const existingValue = selectElement.value; // Capture existing selected value
+
+        // Clear existing options and add the default option
+        selectElement.innerHTML = '<option value="" disabled selected>Select a Badge</option>';
+
+        badgeData.forEach(badge => {
+            const option = document.createElement("option");
+            option.value = badge.id;
+            option.textContent = `${badge.name}: ${badge.description}`;
+            // Preserve selection if the badge ID matches the existing value
+            if (badge.id === parseInt(existingValue)) { // Ensure type consistency
+                option.selected = true;
+            }
+            selectElement.appendChild(option);
+        });
+
+        // If existing value is not in the fetched badges, reset to default
+        const isExistingValueValid = badgeData.some(badge => badge.id === parseInt(existingValue));
+        if (existingValue && !isExistingValueValid) {
+            selectElement.value = "";
+        }
+    }
+
+    // Function to renumber badge uploads
     function renumberBadgeUploads() {
         const badgeUploads = badgeUploadContainer.querySelectorAll(".badge-upload-unit");
         badgeUploads.forEach((upload, index) => {
@@ -221,7 +276,15 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function addBadgeUpload() {
+    // Function to update the "Add Badge Upload" button's state
+    function updateAddBadgeButton() {
+        const currentUploads = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
+        addBadgeBtn.disabled = currentUploads >= maxBadgeUploads;
+        addBadgeBtn.style.display = currentUploads >= maxBadgeUploads ? "none" : "block";
+    }
+
+    // Function to add a new badge upload section
+    async function addBadgeUpload() {
         const currentUploads = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
         if (currentUploads >= maxBadgeUploads) return;
 
@@ -253,18 +316,28 @@ document.addEventListener("DOMContentLoaded", () => {
         badgeUploadContainer.appendChild(newBadgeUpload);
 
         const badgeSelect = document.getElementById(badgeIdName);
-        fetchAndPopulateBadgeDropdown(badgeSelect);
+        await fetchAndPopulateBadgeDropdown(badgeSelect);
+
+        // After populating, ensure default is selected
+        const defaultOption = badgeSelect.querySelector('option[value=""]');
+        if (defaultOption) {
+            defaultOption.selected = true;
+        }
 
         renumberBadgeUploads();
         updateAddBadgeButton();
     }
 
-    // Event delegation for "Remove" buttons
+    // -------------------------
+    // Event Delegation for "Remove" Buttons
+    // -------------------------
     badgeUploadContainer.addEventListener("click", async (event) => {
         if (event.target && event.target.matches(".removeBadgeUpload")) {
             const button = event.target;
             const badgeUploadUnit = button.closest(".badge-upload-unit");
-            const cachedFilePath = button.getAttribute('data-file-path') || badgeUploadUnit.querySelector('input[type="file"]').getAttribute('data-existing') || badgeUploadUnit.querySelector('input[type="hidden"]').value;
+            const cachedFilePath = button.getAttribute('data-file-path') || 
+                                    badgeUploadUnit.querySelector('input[type="file"]').getAttribute('data-existing') || 
+                                    badgeUploadUnit.querySelector('input[type="hidden"]').value;
 
             if (cachedFilePath) {
                 const csrfToken = document.querySelector('input[name="csrf_token"]').value;
@@ -305,60 +378,34 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Initialize badge uploads
-    if (badgeUploadContainer.querySelectorAll(".badge-upload-unit").length === 0) {
-        addBadgeUpload();
-    } else {
-        // Update the badgeUploadCounter to prevent index duplication
-        badgeUploadCounter = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
-        renumberBadgeUploads();
+    // -------------------------
+    // Initialization on Page Load
+    // -------------------------
+    async function initializeBadgeUploads() {
+        const existingUploads = badgeUploadContainer.querySelectorAll(".badge-upload-unit").length;
+
+        if (existingUploads === 0) {
+            await addBadgeUpload();
+        } else {
+            badgeUploadCounter = existingUploads;
+            renumberBadgeUploads();
+
+            // Populate existing badge upload dropdowns
+            const existingBadgeSelects = badgeUploadContainer.querySelectorAll("select[name^='badge_uploads-'][name$='-badge_id']");
+            for (const select of existingBadgeSelects) {
+                await fetchAndPopulateBadgeDropdown(select);
+            }
+        }
+
+        // Ensure default selection after initial population
+        ensureSelectBadgeDefault();
+
+        // Update the Add button's state
+        updateAddBadgeButton();
     }
 
+    initializeBadgeUploads();
+
+    // Attach event listener for adding new badge uploads
     addBadgeBtn.addEventListener("click", addBadgeUpload);
-
-    updateAddBadgeButton();
 });
-
-// Function to validate phone number format
-function validatePhoneNumberFormat(phone) {
-    // Allowed characters: digits, spaces, hyphens, parentheses
-    const phoneRegex = /^[\d\s\-\(\)]+$/;
-    return phoneRegex.test(phone);
-}
-
-// Function to count digits in the phone number
-function countDigits(phone) {
-    const digits = phone.replace(/\D/g, '');
-    return digits.length;
-}
-
-// Function to validate the phone number
-function validatePhoneNumber() {
-    const phoneField = document.getElementById("phone_number"); // Adjust ID if different
-    const phoneErrorContainer = document.getElementById("phone_number-error");
-    const phone = phoneField.value.trim();
-
-    // Check format
-    if (!validatePhoneNumberFormat(phone)) {
-        phoneErrorContainer.textContent = "Phone number can only contain digits, spaces, hyphens, or parentheses.";
-        phoneErrorContainer.style.display = "block";
-        phoneField.classList.add("is-invalid");
-        return false;
-    }
-
-    // Check digit count
-    const digitCount = countDigits(phone);
-    if (digitCount < 10 || digitCount > 15) {
-        phoneErrorContainer.textContent = "Phone number must contain between 10 and 15 digits.";
-        phoneErrorContainer.style.display = "block";
-        phoneField.classList.add("is-invalid");
-        return false;
-    }
-
-    // If valid
-    phoneErrorContainer.textContent = "";
-    phoneErrorContainer.style.display = "none";
-    phoneField.classList.remove("is-invalid");
-    phoneField.classList.add("is-valid");
-    return true;
-}
