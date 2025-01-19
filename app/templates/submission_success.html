@@ -46,10 +46,18 @@
             <li><strong>Email:</strong> {{ submission_details.email }}</li>
             <li><strong>Reason for Design:</strong> {{ submission_details.about_why_design }}</li>
             <li><strong>About Yourself:</strong> {{ submission_details.about_yourself }}</li>
-            <li><strong>Badge Name:</strong> {{ submission_details.badge.name }}</li>
-            <li><strong>Uploaded Image:</strong><br>
-                <img src="{{ url_for('static', filename='submissions/' + submission_details.artwork_file) }}" alt="Artwork for {{ submission_details.badge.name }}" style="max-width: 300px; max-height: 300px;">
-            </li>
+
+            {% for artwork in badge_artworks %}
+                <li>
+                    <strong>Badge Name:</strong> {{ artwork.badge.name }}<br>
+                    <strong>Artwork File:</strong> {{ artwork.artwork_file }}
+                </li>
+
+                <li><strong>Uploaded Image:</strong><br>
+                    <img src="{{ url_for('static', filename='submissions/' + artwork.artwork_file) }}" alt="Artwork for {{ artwork.badge.name }}" style="max-width: 300px; max-height: 300px;">
+                </li>
+            
+            {% endfor %}
             <li><strong>Opt-In for Featured Artwork:</strong> {{ "Yes" if submission_details.opt_in_featured_artwork else "No" }}</li>
             <li><strong>Parent Consent:</strong> {{ "Yes" if submission_details.parent_consent else "No" }}</li>
         {% endif %}

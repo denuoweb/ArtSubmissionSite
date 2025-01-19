@@ -215,8 +215,8 @@ class YouthArtistSubmissionForm(FlaskForm):
     # Badge Design Information
     badge_id = SelectField(
         "Badge Name",
-        coerce=lambda x: int(x) if x and str(x).isdigit() else None,  # Safely handle None or invalid values
-        validators=[DataRequired(message="Please select a badge.")],  # Ensure a valid badge is selected
+        coerce=int,  # Simplified coercion
+        validators=[DataRequired(message="Please select a badge.")],
     )
     artwork_file = FileField(
         "Upload Artwork",

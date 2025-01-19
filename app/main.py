@@ -240,11 +240,13 @@ def judges_ballot():
         YouthArtistSubmission.email,
         YouthArtistSubmission.about_why_design,
         YouthArtistSubmission.about_yourself,
-        YouthArtistSubmission.artwork_file.label("artwork_file"),
+        BadgeArtwork.artwork_file.label("artwork_file"),
         Badge.id.label("badge_id"),
         Badge.name.label("badge_name"),
     ).join(
-        Badge, YouthArtistSubmission.badge_id == Badge.id
+        BadgeArtwork, BadgeArtwork.youth_submission_id == YouthArtistSubmission.id
+    ).join(
+        Badge, BadgeArtwork.badge_id == Badge.id
     ).distinct().all()
     logger.debug(f"Youth submissions retrieved: {len(youth_submissions)}")
 
@@ -502,17 +504,16 @@ def call_for_youth_artists():
 
         submission_start = (
             submission_period.submission_start.strftime("%B %d, %Y at %I:%M %p %Z")
-            if submission_period else None
+            if submission_period else "N/A"
         )
         submission_end = (
             submission_period.submission_end.strftime("%B %d, %Y at %I:%M %p %Z")
-            if submission_period else None
+            if submission_period else "N/A"
         )
 
         form = YouthArtistSubmissionForm()
-
         badges = Badge.query.all()
-        badge_choices = [(None, "Select a badge")] + [(badge.id, badge.name) for badge in badges]
+        badge_choices = [(badge.id, badge.name) for badge in badges]
         form.badge_id.choices = badge_choices
 
         if request.method == "POST":
@@ -520,25 +521,8 @@ def call_for_youth_artists():
                 flash("Submissions are currently closed. You cannot submit at this time.", "danger")
                 return redirect(url_for("main.call_for_youth_artists"))
 
-            # Check if the email already exists
-            email = form.email.data
-            existing_submission = YouthArtistSubmission.query.filter_by(email=email).first()
-            if existing_submission:
-                flash("The provided email is already associated with an existing youth submission. Please use a different email.", "danger")
-                return render_template(
-                    "call_for_youth_artists.html",
-                    form=form,  # Return the form with existing data
-                    badges=badges,
-                    submission_open=submission_open,
-                    submission_start=submission_start,
-                    submission_end=submission_end,
-                    is_admin=is_admin,
-                )
-
             if not form.validate_on_submit():
-                for field_name, errors in form.errors.items():
-                    for error in errors:
-                        flash(f"{field_name}: {error}", "danger")
+                flash("Please correct the errors in the form.", "danger")
                 return render_template(
                     "call_for_youth_artists.html",
                     form=form,
@@ -549,59 +533,87 @@ def call_for_youth_artists():
                     is_admin=is_admin,
                 )
 
-            try:
-                name = form.name.data
-                age = form.age.data
-                parent_contact_info = form.parent_contact_info.data
-                email = form.email.data
-                about_why_design = form.about_why_design.data
-                about_yourself = form.about_yourself.data
-                badge_id = form.badge_id.data
-                artwork_file = form.artwork_file.data
-                opt_in_featured_artwork=form.opt_in_featured_artwork.data
+            email = form.email.data
+            existing_submission = YouthArtistSubmission.query.filter_by(email=email).first()
+            if existing_submission:
+                flash("The provided email is already associated with an existing youth submission. Please use a different email.", "danger")
+                return render_template(
+                    "call_for_youth_artists.html",
+                    form=form,
+                    badges=badges,
+                    submission_open=submission_open,
+                    submission_start=submission_start,
+                    submission_end=submission_end,
+                    is_admin=is_admin,
+                )
+
+            badge_id = form.badge_id.data
+            artwork_file = form.artwork_file.data
+
+            if not badge_id or not artwork_file:
+                flash("Please select a valid badge and upload the corresponding artwork.", "danger")
+                return render_template(
+                    "call_for_youth_artists.html",
+                    form=form,
+                    badges=badges,
+                    submission_open=submission_open,
+                    submission_start=submission_start,
+                    submission_end=submission_end,
+                    is_admin=is_admin,
+                )
+
+            if not Badge.query.get(badge_id):
+                flash("Invalid badge selection.", "danger")
+                return render_template(
+                    "call_for_youth_artists.html",
+                    form=form,
+                    badges=badges,
+                    submission_open=submission_open,
+                    submission_start=submission_start,
+                    submission_end=submission_end,
+                    is_admin=is_admin,
+                )
+
+            file_ext = os.path.splitext(artwork_file.filename)[1]
+            if file_ext.lower() not in ['.jpg', '.jpeg', '.png', '.svg']:
+                flash("Invalid file format. Only JPG, JPEG, PNG, or SVG files are allowed.", "danger")
+                return render_template(
+                    "call_for_youth_artists.html",
+                    form=form,
+                    badges=badges,
+                    submission_open=submission_open,
+                    submission_start=submission_start,
+                    submission_end=submission_end,
+                    is_admin=is_admin,
+                )
+
+            unique_filename = f"{uuid.uuid4()}{file_ext}"
+            artwork_path = os.path.join(current_app.config["UPLOAD_FOLDER"], unique_filename)
+            artwork_file.save(artwork_path)
+
+            submission = YouthArtistSubmission(
+                name=form.name.data,
+                age=form.age.data,
+                parent_contact_info=form.parent_contact_info.data,
+                email=form.email.data,
+                about_why_design=form.about_why_design.data,
+                about_yourself=form.about_yourself.data,
+                opt_in_featured_artwork=form.opt_in_featured_artwork.data,
                 parent_consent=form.parent_consent.data
+            )
+            db.session.add(submission)
+            db.session.flush()
 
-                if badge_id is None:
-                    flash("Please select a valid badge.", "danger")
-                    return redirect(url_for("main.call_for_youth_artists"))
+            badge_artwork = BadgeArtwork(
+                youth_submission_id=submission.id,
+                badge_id=int(badge_id),
+                artwork_file=unique_filename
+            )
+            db.session.add(badge_artwork)
+            db.session.commit()
 
-                if not Badge.query.get(badge_id):
-                    flash("Invalid badge selection.", "danger")
-                    return redirect(url_for("main.call_for_youth_artists"))
-
-                file_ext = os.path.splitext(artwork_file.filename)[1]
-                if not file_ext:
-                    flash("Invalid file extension for uploaded file.", "danger")
-                    return redirect(url_for("main.call_for_youth_artists"))
-
-                unique_filename = f"{uuid.uuid4()}{file_ext}"
-                artwork_path = os.path.join(current_app.config["UPLOAD_FOLDER"], unique_filename)
-                artwork_file.save(artwork_path)
-
-                submission = YouthArtistSubmission(
-                    name=name,
-                    age=age,
-                    parent_contact_info=parent_contact_info,
-                    email=email,
-                    about_why_design=about_why_design,
-                    about_yourself=about_yourself,
-                    badge_id=badge_id,
-                    artwork_file=unique_filename,
-                    opt_in_featured_artwork=opt_in_featured_artwork,
-                    parent_consent=parent_consent
-                )
-                db.session.add(submission)
-                db.session.commit()
-
-                flash("Submission received successfully!", "success")
-                return redirect(
-                    url_for("main.submission_success", submission_id=submission.id, type="youth_artist")
-                )
-
-            except Exception as e:
-                db.session.rollback()
-                logger.error(f"Error during youth artist submission: {e}")
-                flash("An error occurred while processing your submission. Please try again.", "danger")
+            flash("Submission received successfully!", "success")
+            return redirect(url_for("main.submission_success", submission_id=submission.id, type="youth_artist"))
 
         return render_template(
             "call_for_youth_artists.html",
@@ -614,9 +626,11 @@ def call_for_youth_artists():
             submission_period=submission_period
         )
     except Exception as e:
-        logger.error(f"Critical error in call_for_youth_artists: {e}")
+        db.session.rollback()
+        logger.error(f"Error during youth artist submission: {e}", exc_info=True)
         flash("A critical error occurred. Please contact support.", "danger")
         return redirect(url_for("main.index"))
+
 
 
 @main_bp.route("/submission-success")
@@ -633,6 +647,8 @@ def submission_success():
             badge_artworks = BadgeArtwork.query.filter_by(submission_id=submission_details.id).all()
     elif submission_type == "youth_artist":
         submission_details = YouthArtistSubmission.query.get(submission_id)
+        if submission_details:
+            badge_artworks = BadgeArtwork.query.filter_by(youth_submission_id=submission_details.id).all()
 
     return render_template(
         "submission_success.html",
@@ -640,6 +656,7 @@ def submission_success():
         submission_type=submission_type,
         badge_artworks=badge_artworks,
     )
+
 
 
 @main_bp.route("/judges/submission-success")

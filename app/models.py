@@ -49,22 +49,20 @@ class YouthArtistSubmission(db.Model):
     email = db.Column(db.String(120), nullable=False, unique=True)  # Youth artist's email
     about_why_design = db.Column(db.Text, nullable=False)  # Reason for designing the artwork
     about_yourself = db.Column(db.Text, nullable=False)  # Information about the youth artist
-    badge_id = db.Column(db.Integer, db.ForeignKey("badge.id"), nullable=False)  # Reference to Badge
-    artwork_file = db.Column(db.String(255), nullable=False)  # File path for the artwork
     opt_in_featured_artwork = db.Column(db.Boolean, nullable=False, default=False)  # Opt-in for featuring artwork
     parent_consent = db.Column(db.Boolean, nullable=False, default=False)  # Parent/Guardian consent
-    
-    badge = db.relationship("Badge", backref="youth_submissions")
-    judge_votes = db.relationship('JudgeVote', backref='youth_submission', cascade='all, delete-orphan')
 
+    badge_artworks = db.relationship('BadgeArtwork', backref='youth_submission', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f"<YouthArtistSubmission name={self.name}, email={self.email}>"
+    
 
 # Badge artwork model representing artwork submissions tied to a badge
 class BadgeArtwork(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    submission_id = db.Column(db.Integer, db.ForeignKey('artist_submission.id', ondelete='CASCADE'), nullable=False)
+    submission_id = db.Column(db.Integer, db.ForeignKey('artist_submission.id', ondelete='CASCADE'), nullable=True)
+    youth_submission_id = db.Column(db.Integer, db.ForeignKey('youth_artist_submission.id', ondelete='CASCADE'), nullable=True)
     badge_id = db.Column(db.Integer, db.ForeignKey('badge.id', ondelete='CASCADE'), nullable=False)
     instance = db.Column(db.Integer, nullable=False, default=0)
     artwork_file = db.Column(db.String(255), nullable=False)  # File path for the artwork
