@@ -697,5 +697,9 @@ def check_email():
         # Check if the email exists in the database
         is_available = ArtistSubmission.query.filter_by(email=email).first() is None
         return jsonify({"isAvailable": is_available})
+    except CSRFError as csrf_err:
+        current_app.logger.error(f"CSRF validation failed: {csrf_err}")
+        return jsonify({"error": "CSRF token missing or invalid."}), 400
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error in check_email: {e}", exc_info=True)
+        return jsonify({"error": "Server error"}), 500

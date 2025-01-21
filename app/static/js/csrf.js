@@ -1,27 +1,33 @@
+// static/js/csrf.js
+
 document.addEventListener("DOMContentLoaded", function() {
-    const csrfTokenInput = document.querySelector('input[name="csrf_token"]');
+    const csrfMetaTag = document.querySelector('meta[name="csrf-token"]');
 
     function refreshCsrfToken() {
-        fetch(`${basePath}/refresh_csrf`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.csrf_token) {
-                    csrfTokenInput.value = data.csrf_token;
-                    // Update the CSRF token in AJAX setup if needed
-                    updateAjaxCsrfToken(data.csrf_token);
-                }
-            })
-            .catch(error => console.error('Error refreshing CSRF token:', error));
+        fetch(`${basePath}/refresh_csrf`, {
+            method: 'GET',
+            credentials: 'same-origin' // Ensure cookies are sent if needed
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.csrf_token && csrfMetaTag) {
+                csrfMetaTag.setAttribute('content', data.csrf_token);
+                console.log("CSRF token refreshed via meta tag.");
+            } else {
+                console.error("CSRF token not found in response or meta tag missing.");
+            }
+        })
+        .catch(error => console.error('Error refreshing CSRF token:', error));
     }
 
-    function updateAjaxCsrfToken(csrfToken) {
-        // Assuming you are using fetch API for AJAX
-        document.querySelectorAll("fetch, ajax").forEach(call => {
-            call.headers['X-CSRFToken'] = csrfToken;
-        });
-    }
+    // Set CSRF token to refresh every 15 minutes (900,000 milliseconds)
+    setInterval(refreshCsrfToken, 900000);
 
-    // Set CSRF token to refresh every 15 minutes
-    setInterval(refreshCsrfToken, 900000);  // 900000 milliseconds = 15 minutes
+    // Initial CSRF token refresh on page load
+    refreshCsrfToken();
 });
-

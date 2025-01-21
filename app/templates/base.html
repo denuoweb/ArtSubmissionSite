@@ -8,6 +8,8 @@
     <meta property="og:description" content="Participate in the badge contest! Submit your badge designs and vote on the best ones.">
     <meta property="og:url" content="{{ url_for('main.index', _external=True) }}">
     <meta property="og:image" content="{{ url_for('static', filename='images/preview.png', _external=True) }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
     <title>Quest by Cycle Badge Submission</title>
     
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">

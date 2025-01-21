@@ -33,8 +33,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function checkEmailAvailability(email) {
         try {
-            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-            const response = await fetch(`${basePath}/api/check-email`, {  // Adjusted to relative path
+            // Retrieve CSRF token from meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            
+            const response = await fetch(`${basePath}/api/check-email`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -42,13 +44,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 },
                 body: JSON.stringify({ email }),
             });
-
-            if (!response.ok) {
-                console.error(`Server returned ${response.status}: ${response.statusText}`);
-                throw new Error("Server error");
-            }
-
+    
             const result = await response.json();
+    
+            if (!response.ok) {
+                if (result.error === "CSRF token missing or invalid.") {
+                    alert("Session expired. Please refresh the page and try again.");
+                    // Optionally, redirect to the login page or perform another action
+                } else {
+                    console.error(`Server returned ${response.status}: ${response.statusText}`);
+                    throw new Error(result.error || "Server error");
+                }
+            }
+    
             return result.isAvailable;
         } catch (error) {
             console.error("Error checking email availability:", error.message);
@@ -56,6 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return false; // Assume email is unavailable if an error occurs
         }
     }
+    
 
     async function validateEmail() {
         const email = emailField.value.trim();
