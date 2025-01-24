@@ -1,206 +1,171 @@
 document.addEventListener("DOMContentLoaded", function () {
-    console.info("Initializing rankings...");
+    console.info("Initializing ranking forms...");
 
-    // Tab navigation logic
-    initializeTabs();
-
+    // --- Adult Ranking Form ---
+    const rankingForm = document.getElementById("ranking-form");
     const rankingsList = document.getElementById("rankings-list");
     const rankInput = document.getElementById("rank-input");
-    const rankingForm = document.querySelector("#ranking-form");
-    const csrfToken = document.querySelector("input[name=csrf_token]").value; // Get CSRF token
 
-    // Validate necessary elements exist
-    if (!rankingsList || !rankInput || !rankingForm) {
-        console.error("Required elements not found. Initialization aborted.");
-        return;
+    // --- Youth Ranking Form ---
+    const youthRankingForm = document.getElementById("youth-ranking-form");
+    const youthRankingsList = document.getElementById("youth-rankings-list");
+    const youthRankInput = document.getElementById("youth-rank-input");
+
+    // If present, init adult
+    if (rankingForm && rankingsList && rankInput) {
+        initSortable(rankingForm, rankingsList, rankInput);
     }
 
-    // Initialize SortableJS for drag-and-drop functionality
-    initializeSortable(rankingsList, rankInput, rankingForm, csrfToken);
-
-    // Populate initial rankings on page load
-    updateRankings(rankingsList, rankInput);
-
-    // Handle final form submission
-    handleFormSubmission(rankingForm, csrfToken, rankInput);
+    // If present, init youth
+    if (youthRankingForm && youthRankingsList && youthRankInput) {
+        initSortable(youthRankingForm, youthRankingsList, youthRankInput);
+    }
 });
 
 /**
- * Initialize Bootstrap tabs for navigation.
+ * Initialize SortableJS for a given form + list + hidden input.
+ * @param {HTMLFormElement} formEl
+ * @param {HTMLElement} listEl
+ * @param {HTMLInputElement} rankInputEl
  */
-function initializeTabs() {
-    const triggerTabList = [].slice.call(document.querySelectorAll('#ballotTabs button'));
-    triggerTabList.forEach(function (triggerEl) {
-        const tabTrigger = new bootstrap.Tab(triggerEl);
-        triggerEl.addEventListener('click', function (event) {
-            event.preventDefault();
-            tabTrigger.show();
-        });
-    });
-}
+function initSortable(formEl, listEl, rankInputEl) {
+    const csrfToken = document.querySelector("input[name='csrf_token']")?.value || "";
 
-/**
- * Initialize SortableJS for the rankings list.
- * @param {HTMLElement} rankingsList
- * @param {HTMLInputElement} rankInput
- * @param {HTMLFormElement} rankingForm
- * @param {string} csrfToken
- */
-function initializeSortable(rankingsList, rankInput, rankingForm, csrfToken) {
-    Sortable.create(rankingsList, {
+    // Create Sortable instance
+    Sortable.create(listEl, {
         animation: 150,
         onEnd: function () {
-            updateRankings(rankingsList, rankInput); // Update rankings display and hidden input
-            autoSaveRankings(rankInput, rankingForm, csrfToken); // Trigger auto-save on reorder
+            updateRankings(listEl, rankInputEl);
+            autoSaveRankings(formEl, rankInputEl, csrfToken);
         },
     });
-}
 
-/**
- * Update the rank labels and hidden rank input field.
- * @param {HTMLElement} rankingsList
- * @param {HTMLInputElement} rankInput
- */
-function updateRankings(rankingsList, rankInput) {
-    const rankedItems = Array.from(rankingsList.querySelectorAll(".rank-item"));
+    // Initial labeling
+    updateRankings(listEl, rankInputEl);
 
-    if (!rankedItems.length) {
-        console.warn("No rank items found.");
-        showNotification("No items to rank. Please refresh the page.", "warning");
-        return;
-    }
-
-    const seenIds = new Set(); // Track seen IDs to avoid duplicates
-    const rankings = rankedItems
-        .map((item, index) => {
-            const submissionId = item.getAttribute("data-id");
-
-            // Debug log for troubleshooting
-            console.debug(`Rank item: ${index + 1}, Submission ID: ${submissionId}`);
-
-            // Skip duplicates
-            if (seenIds.has(submissionId)) {
-                console.warn(`Duplicate data-id found: ${submissionId}`);
-                item.classList.add("duplicate-error"); // Highlight duplicates in UI
-                return null;
-            }
-            seenIds.add(submissionId);
-
-            // Ensure rank position element exists
-            let rankPosition = item.querySelector(".rank-position");
-            if (!rankPosition) {
-                console.warn(`.rank-position element is missing for item with data-id: ${submissionId}. Adding dynamically.`);
-                rankPosition = document.createElement("span");
-                rankPosition.className = "rank-position";
-                item.appendChild(rankPosition); // Dynamically append the missing element
-            }
-
-            // Update rank position display
-            const rankSuffix = getRankSuffix(index + 1);
-            rankPosition.textContent = `${index + 1}${rankSuffix} Place`;
-
-            return submissionId; // Return valid submission ID
-        })
-        .filter((id) => id !== null); // Remove any null values
-
-    // Populate the hidden input field with unique IDs
-    rankInput.value = rankings.join(",");
-    console.debug(`Rankings updated: ${rankInput.value}`);
-}
-
-/**
- * Auto-save rankings to the server.
- * @param {HTMLInputElement} rankInput
- * @param {HTMLFormElement} rankingForm
- * @param {string} csrfToken
- */
-function autoSaveRankings(rankInput, rankingForm, csrfToken) {
-    const rankedVotes = rankInput.value;
-
-    console.debug("Auto-saving rankings:", rankedVotes);
-
-    fetch(rankingForm.action, {
-        method: "POST",
-        headers: {
-            "X-Requested-With": "XMLHttpRequest",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "X-CSRFToken": csrfToken,
-        },
-        body: new URLSearchParams({ rank: rankedVotes }), // Send only the rank data
-    })
-        .then((response) => {
-            if (response.ok) {
-                console.info("Rankings saved automatically.");
-                showNotification("Rankings saved automatically.", "success");
-            } else {
-                console.error("Failed to auto-save rankings:", response.status);
-                showNotification("Failed to auto-save rankings.", "danger");
-            }
-        })
-        .catch((error) => {
-            console.error("Error during auto-save:", error);
-            showNotification("An error occurred during auto-save.", "danger");
-        });
-}
-
-/**
- * Handle final form submission.
- * @param {HTMLFormElement} rankingForm
- * @param {string} csrfToken
- * @param {HTMLInputElement} rankInput
- */
-function handleFormSubmission(rankingForm, csrfToken, rankInput) {
-    rankingForm.addEventListener("submit", function (event) {
-        event.preventDefault(); // Prevent default form submission behavior
-
-        const formData = new FormData(rankingForm);
-        console.debug("Submitting rankings form:", Array.from(formData.entries()));
-
-        fetch(rankingForm.action, {
+    // Final form submission
+    formEl.addEventListener("submit", function (event) {
+        event.preventDefault();
+        const formData = new FormData(formEl);
+        console.debug("Submitting final rankings form:", Array.from(formData.entries()));
+        fetch(formEl.action, {
             method: "POST",
-            body: new URLSearchParams(formData), // Convert formData to URL-encoded string
+            body: new URLSearchParams(formData),
         })
             .then((response) => {
                 if (response.redirected) {
-                    console.info("Form submitted successfully. Redirecting...");
                     window.location.href = response.url;
                 } else if (response.ok) {
-                    console.info("Form submitted successfully.");
-                    alert("Rankings submitted successfully! 🎉");
+                    console.info("Rankings submitted successfully!");
+                    alert("Rankings submitted successfully!");
                 } else {
                     console.error("Failed to submit rankings:", response.status);
                     alert("Failed to submit rankings. Please try again.");
                 }
             })
             .catch((error) => {
-                console.error("Error during form submission:", error);
+                console.error("Error during final form submission:", error);
                 alert("An error occurred. Please try again.");
             });
     });
 }
 
 /**
- * Display a notification on the screen.
- * @param {string} message
- * @param {string} type
+ * Update the rank labels and hidden rank input field.
+ * @param {HTMLElement} listEl - The container with .rank-item elements.
+ * @param {HTMLInputElement} rankInputEl - The hidden input to store the comma-separated IDs.
  */
-function showNotification(message, type) {
-    const notification = document.createElement("div");
-    notification.className = `alert alert-${type} fixed-top`;
-    notification.textContent = message;
+function updateRankings(listEl, rankInputEl) {
+    const rankItems = Array.from(listEl.querySelectorAll(".rank-item"));
+    if (!rankItems.length) {
+        console.warn("No .rank-item found in listEl.");
+        rankInputEl.value = "";
+        return;
+    }
 
-    document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000); // Remove after 3 seconds
+    const seenIds = new Set();
+    const rankedIds = [];
+
+    rankItems.forEach((item, index) => {
+        const submissionId = item.getAttribute("data-id");
+        if (!submissionId) return;
+
+        // If you genuinely have duplicates in the DOM, you can warn here:
+        if (seenIds.has(submissionId)) {
+            console.warn(`Duplicate data-id found: ${submissionId}. This item will be ignored in final ranking.`);
+            return;
+        }
+        seenIds.add(submissionId);
+
+        // Update label text, e.g., "1st Place", "2nd Place", etc.
+        const rankPosEl = item.querySelector(".rank-position");
+        if (rankPosEl) {
+            const place = index + 1;
+            rankPosEl.textContent = `${place}${getRankSuffix(place)} Place`;
+        }
+        // Collect submissionId for final input
+        rankedIds.push(submissionId);
+    });
+
+    // Store comma-separated IDs
+    rankInputEl.value = rankedIds.join(",");
+    console.debug("Updated rank input:", rankInputEl.value);
 }
 
 /**
- * Helper function to get the rank suffix (e.g., 1st, 2nd, 3rd).
- * @param {number} rank
- * @returns {string}
+ * Auto-save rankings to the server (POST).
+ * @param {HTMLFormElement} formEl
+ * @param {HTMLInputElement} rankInputEl
+ * @param {string} csrfToken
+ */
+function autoSaveRankings(formEl, rankInputEl, csrfToken) {
+    if (!rankInputEl.value) {
+        console.debug("No rank input to save.");
+        return;
+    }
+    const formName = formEl.querySelector("input[name='form_name']")?.value || "";
+
+    // We only need to send rank + form_name + csrf_token
+    const payload = new URLSearchParams({
+        rank: rankInputEl.value,
+        form_name: formName,
+        csrf_token: csrfToken,
+    });
+
+    fetch(formEl.action, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: payload.toString(),
+    })
+        .then((response) => {
+            if (!response.ok) {
+                console.warn("Auto-save failed with status:", response.status);
+            } else {
+                console.debug("Rankings auto-saved successfully.");
+            }
+        })
+        .catch((error) => {
+            console.error("Error during auto-save:", error);
+        });
+}
+
+/**
+ * Helper to get rank suffix (st, nd, rd, th).
  */
 function getRankSuffix(rank) {
-    if (rank === 1) return "st";
-    if (rank === 2) return "nd";
-    if (rank === 3) return "rd";
-    return "th";
+    if (rank % 100 >= 11 && rank % 100 <= 13) {
+        return "th";
+    }
+    switch (rank % 10) {
+        case 1:
+            return "st";
+        case 2:
+            return "nd";
+        case 3:
+            return "rd";
+        default:
+            return "th";
+    }
 }

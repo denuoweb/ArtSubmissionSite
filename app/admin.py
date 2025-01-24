@@ -190,6 +190,8 @@ def manage_badges():
 
     badges = Badge.query.all()
     return render_template("admin_badges.html", badges=badges)
+
+
 @admin_bp.route("/judges/results", methods=["GET"])
 @login_required
 @admin_required
@@ -373,52 +375,72 @@ def update_submission_dates():
 @login_required
 @admin_required
 def api_artwork_detail(item_id):
-    badge_artwork = BadgeArtwork.query.options(joinedload(BadgeArtwork.submission)).filter_by(id=item_id).first()
+    """
+    Enhanced route to fetch submission details for either adult or youth.
+    1) Try to look up as a BadgeArtwork
+    2) Check if that references an adult or youth submission
+    3) Fallback: directly look up an ArtistSubmission
+    4) Fallback: directly look up a YouthArtistSubmission
+    5) Return 404 if not found
+    """
+    # 1) Attempt to find a BadgeArtwork
+    badge_artwork = BadgeArtwork.query.options(
+        joinedload(BadgeArtwork.submission),    # Adult
+        joinedload(BadgeArtwork.youth_submission)  # Youth
+    ).filter_by(id=item_id).first()
+
     if badge_artwork:
-        submission = badge_artwork.submission
+        # Distinguish between adult or youth
+        if badge_artwork.submission_id is not None and badge_artwork.submission:
+            # Adult submission
+            submission = badge_artwork.submission
+            artwork_details = {
+                "type": "adult",
+                "name": submission.name,
+                "email": submission.email,
+                "artist_bio": submission.artist_bio,
+                "portfolio_link": submission.portfolio_link,
+                "statement": submission.statement,
+                "demographic_identity": submission.demographic_identity,
+                "lane_county_connection": submission.lane_county_connection,
+                "hear_about_contest": submission.hear_about_contest,
+                "future_engagement": submission.future_engagement,
+                "opt_in_featured_artwork": submission.opt_in_featured_artwork,
+                "badge_artworks": [
+                    {
+                        "badge_id": badge_artwork.badge_id,
+                        "artwork_file": url_for('static',
+                            filename=f"submissions/{badge_artwork.artwork_file}",
+                            _external=True
+                        ),
+                    }
+                ],
+            }
+            return jsonify(artwork_details)
+
+    elif badge_artwork.youth_submission_id is not None and badge_artwork.youth_submission:
+        # YOUTH submission
+        youth_submission = badge_artwork.youth_submission
         artwork_details = {
-            "name": submission.name,
-            "email": submission.email,
-            "artist_bio": submission.artist_bio,
-            "portfolio_link": submission.portfolio_link,
-            "statement": submission.statement,
-            "demographic_identity": submission.demographic_identity,
-            "lane_county_connection": submission.lane_county_connection,
-            "hear_about_contest": submission.hear_about_contest,
-            "future_engagement": submission.future_engagement,
+            "type": "youth",
+            "name": youth_submission.name,
+            "email": youth_submission.email,
+            "age": youth_submission.age,
+            "parent_contact_info": youth_submission.parent_contact_info,
+            "about_why_design": youth_submission.about_why_design,
+            "about_yourself": youth_submission.about_yourself,
+            "opt_in_featured_artwork": youth_submission.opt_in_featured_artwork,
+            "parent_consent": youth_submission.parent_consent,
             "badge_artworks": [
                 {
                     "badge_id": badge_artwork.badge_id,
-                    "artwork_file": url_for('static', filename=f"submissions/{badge_artwork.artwork_file}", _external=True)
-                }
-            ],
-            "opt_in_featured_artwork": submission.opt_in_featured_artwork
+                    "artwork_file": url_for('static',
+                        filename=f"submissions/{badge_artwork.artwork_file}",
+                        _external=True
+                    ),
+                }]
         }
         return jsonify(artwork_details)
-
-    submission = ArtistSubmission.query.options(joinedload(ArtistSubmission.badge_artworks)).filter_by(id=item_id).first()
-    if submission:
-        badge_artworks = [
-            {
-                "badge_id": artwork.badge_id,
-                "artwork_file": url_for('static', filename=f"submissions/{artwork.artwork_file}", _external=True)
-            } for artwork in submission.badge_artworks
-        ]
-        submission_details = {
-            "name": submission.name,
-            "email": submission.email,
-            "artist_bio": submission.artist_bio,
-            "portfolio_link": submission.portfolio_link,
-            "statement": submission.statement,
-            "demographic_identity": submission.demographic_identity,
-            "lane_county_connection": submission.lane_county_connection,
-            "hear_about_contest": submission.hear_about_contest,
-            "future_engagement": submission.future_engagement,
-            "badge_artworks": badge_artworks,
-            "opt_in_featured_artwork": submission.opt_in_featured_artwork
-        }
-        return jsonify(submission_details)
-
     return jsonify({"error": "Item not found"}), 404
 
 

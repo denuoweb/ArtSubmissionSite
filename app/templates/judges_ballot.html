@@ -2,11 +2,8 @@
 {% block content %}
 
 <div class="introduction mt-4">
-
-    <h2>Welcome  {{ current_user.name }} to the Judges' Ballot</h2>
-
-    <p>Please review and rank the submissions below by drag and drop. Your order is auto saved after each move. Your expertise and judgment are invaluable to this competition.</p>
-
+    <h2>Welcome {{ current_user.name }} to the Judges' Ballot</h2>
+    <p>Please review and rank the submissions below by drag and drop. Your order is auto-saved after each move. Your expertise and judgment are invaluable to this competition.</p>
 </div>
 
 {% if current_user.is_admin %}
@@ -18,7 +15,6 @@
     {{ logout_form.csrf_token() }}
     <button type="submit" class="btn btn-danger">Logout</button>
 </form>
-
 
 <h1>Ballot</h1>
 
@@ -36,23 +32,27 @@
     </li>
 </ul>
 
-<!-- Tab Content -->
 <div class="tab-content mt-3">
-    <!-- General Submissions Tab -->
+    <!-- Adult/General Submissions -->
     <div class="tab-pane show active" id="general" role="tabpanel" aria-labelledby="general-tab">
         <form id="ranking-form" action="{{ url_for('main.judges_ballot') }}" method="POST">
             {{ rank_form.hidden_tag() }}
             <input type="hidden" id="rank-input" name="rank">
             <input type="hidden" name="form_name" value="ranking_form">
-        
+
             <div id="rankings-list" class="sortable-list grid-layout">
                 {% for submission in artist_submissions %}
                 <div class="rank-item" data-id="{{ submission.id }}">
-                    <span class="rank-number">{{ loop.index }}{{ get_rank_suffix(loop.index) }}</span>
-                    <img 
-                        src="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}" 
-                        alt="Artwork for {{ submission.name }}" 
+                    <span class="rank-position">
+                        {{ loop.index }}{{ get_rank_suffix(loop.index) }}
+                    </span>
+                    <img
+                        src="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}"
+                        alt="Artwork for {{ submission.name }}"
                         class="artwork-thumbnail"
+                        data-artwork-url="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}"
+                        data-name="{{ submission.name }}"
+                        data-id="{{ submission.id }}"
                     />
                 </div>
                 {% endfor %}
@@ -60,24 +60,26 @@
         </form>
     </div>
 
-    <!-- Youth Submissions Tab -->
+    <!-- Youth Submissions -->
     <div class="tab-pane" id="youth" role="tabpanel" aria-labelledby="youth-tab">
         <form id="youth-ranking-form" action="{{ url_for('main.judges_ballot') }}" method="POST">
             {{ rank_form.hidden_tag() }}
             <input type="hidden" id="youth-rank-input" name="rank">
             <input type="hidden" name="form_name" value="youth_ranking_form">
+
             <div id="youth-rankings-list" class="sortable-list">
                 {% for submission in youth_submissions %}
                 <div class="rank-item" data-id="{{ submission.id }}">
-                    <!-- Updated image element with necessary attributes -->
-                    <span class="rank-position"></span> 
-                    <img 
-                        src="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}" 
-                        alt="Artwork for {{ submission.name }}" 
-                        class="artwork-thumbnail" 
-                        data-artwork-url="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}" 
-                        data-name="{{ submission.name }}" 
-                        data-id="{{ submission.id }}" 
+                    <span class="rank-position">
+                        {{ loop.index }}{{ get_rank_suffix(loop.index) }}
+                    </span>
+                    <img
+                        src="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}"
+                        alt="Artwork for {{ submission.name }}"
+                        class="artwork-thumbnail"
+                        data-artwork-url="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}"
+                        data-name="{{ submission.name }}"
+                        data-id="{{ submission.id }}"
                     />
                 </div>
                 {% endfor %}
@@ -108,14 +110,15 @@
                 <li class="list-group-item"><strong>Lane County Connection:</strong> <span id="modalLaneCounty"></span></li>
                 <li class="list-group-item"><strong>Accessibility Needs:</strong> <span id="modalAccessibility"></span></li>
                 <li class="list-group-item"><strong>Future Engagement:</strong> <span id="modalFutureEngagement"></span></li>
-                <li class="list-group-item"><strong>Opt-In to Feature All Submitted Artwork?</strong><span id="modalFeaturedOptIn"></span>
+                <li class="list-group-item">
+                    <strong>Opt-In to Feature All Submitted Artwork?</strong>
+                    <span id="modalFeaturedOptIn"></span>
                 </li>
             </ul>
             <ul id="modalBadgeArtworks" class="list-group mt-3"></ul>
         </div>
     </div>
 </div>
-
 
 {% endblock %}
 
