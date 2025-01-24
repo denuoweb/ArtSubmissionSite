@@ -214,9 +214,10 @@ class YouthArtistSubmissionForm(FlaskForm):
 
     # Badge Design Information
     badge_id = SelectField(
-        "Badge Name",
+        "Select a Badge",
         coerce=int,  # Simplified coercion
         validators=[DataRequired(message="Please select a badge.")],
+        choices=[]
     )
     artwork_file = FileField(
         "Upload Artwork",
@@ -241,6 +242,11 @@ class YouthArtistSubmissionForm(FlaskForm):
 
     submit = SubmitField("Submit")
 
+    cached_file_path = HiddenField('Cached File Path')
+
+    def validate_badge_id(self, field):
+        if field.data == 0:
+            raise ValidationError("Please select a valid badge.")
 
 class LoginForm(FlaskForm):
     name = StringField(

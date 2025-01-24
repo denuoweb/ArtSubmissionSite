@@ -292,6 +292,7 @@ def judges_ballot():
         logout_form=logout_form
     )
 
+
 @main_bp.route("/call_for_artists", methods=["GET", "POST"])
 def call_for_artists():
     application_root = current_app.config.get("APPLICATION_ROOT", "/")
@@ -500,6 +501,7 @@ def call_for_artists():
         submission_period=submission_period  # Pass the submission period object
     )
 
+
 @main_bp.route("/call_for_youth_artists", methods=["GET", "POST"])
 def call_for_youth_artists():
     try:
@@ -518,7 +520,7 @@ def call_for_youth_artists():
 
         form = YouthArtistSubmissionForm()
         badges = Badge.query.all()
-        badge_choices = [(badge.id, badge.name) for badge in badges]
+        badge_choices = [(0, "Select a Badge")] + [(badge.id, badge.name) for badge in badges]
         form.badge_id.choices = badge_choices
 
         if request.method == "POST":
@@ -527,6 +529,11 @@ def call_for_youth_artists():
                 return redirect(url_for("main.call_for_youth_artists"))
 
             if not form.validate_on_submit():
+                # Iterate over form errors and flash each one
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        field_label = getattr(form, field).label.text
+                        flash(f"{field_label}: {error}", "danger")
                 flash("Please correct the errors in the form.", "danger")
                 return render_template(
                     "call_for_youth_artists.html",
@@ -555,6 +562,18 @@ def call_for_youth_artists():
             badge_id = form.badge_id.data
             artwork_file = form.artwork_file.data
 
+            if badge_id == 0:
+                flash("Please select a valid badge.", "danger")
+                return render_template(
+                    "call_for_youth_artists.html",
+                    form=form,
+                    badges=badges,
+                    submission_open=submission_open,
+                    submission_start=submission_start,
+                    submission_end=submission_end,
+                    is_admin=is_admin,
+                )
+            
             if not badge_id or not artwork_file:
                 flash("Please select a valid badge and upload the corresponding artwork.", "danger")
                 return render_template(
@@ -637,7 +656,6 @@ def call_for_youth_artists():
         return redirect(url_for("main.index"))
 
 
-
 @main_bp.route("/submission-success")
 def submission_success():
     submission_id = request.args.get("submission_id")
@@ -697,6 +715,35 @@ def check_email():
         # Check if the email exists in the database
         is_available = ArtistSubmission.query.filter_by(email=email).first() is None
         return jsonify({"isAvailable": is_available})
+    except CSRFError as csrf_err:
+        current_app.logger.error(f"CSRF validation failed: {csrf_err}")
+        return jsonify({"error": "CSRF token missing or invalid."}), 400
+    except Exception as e:
+        current_app.logger.error(f"Error in check_email: {e}", exc_info=True)
+        return jsonify({"error": "Server error"}), 500
+
+
+
+@main_bp.route("/api/check-youth-email", methods=["POST"])
+def check_youth_email():
+    try:
+        # Validate CSRF token
+        csrf_token = request.headers.get("X-CSRFToken")
+        validate_csrf(csrf_token)
+
+        # Parse the JSON request body
+        data = request.get_json()
+        email = data.get("email")
+
+        if not email:
+            return jsonify({"error": "Email is required"}), 400
+
+        submission_type = data.get("type")  # "youth"
+
+        if submission_type == "youth":
+            exists = ArtistSubmission.query.filter_by(email=email).first() is not None
+            return jsonify({"isAvailable": not exists})
+    
     except CSRFError as csrf_err:
         current_app.logger.error(f"CSRF validation failed: {csrf_err}")
         return jsonify({"error": "CSRF token missing or invalid."}), 400

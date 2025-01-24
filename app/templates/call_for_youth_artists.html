@@ -29,7 +29,6 @@
     <a href="#" onclick="openBadgeModal(); return false;">here</a>. Each badge represents a specific quest, such as cycling to local landmarks, participating in community events, or promoting sustainability.
 </p>
 
-
 {% if not submission_open %}
     <div class="alert {% if is_admin %}alert-info{% else %}alert-warning{% endif %}">
         {% if is_admin %}
@@ -48,7 +47,7 @@
 {% endif %}
 
 <h2>Application</h2>
-<form method="post" enctype="multipart/form-data">
+<form method="post" enctype="multipart/form-data" id="youthSubmissionForm" novalidate>
     {{ form.hidden_tag() }}
 
     <!-- Fieldset only disables fields for non-admin users when submissions are closed -->
@@ -56,59 +55,80 @@
         <fieldset disabled>
     {% endif %}
 
+    <!-- Name Field -->
     <div class="mb-3">
-        {{ form.name.label(class="form-label") }}
-        {{ form.name(class="form-control") }}
+        <label for="youth_name" class="form-label">Name (First and Last)</label>
+        {{ form.name(class="form-control", id="youth_name") }}
+        <div class="invalid-feedback" id="name-error"></div>
     </div>
 
+    <!-- Age Field -->
     <div class="mb-3">
-        {{ form.age.label(class="form-label") }}
-        {{ form.age(class="form-control") }}
+        <label for="youth_age" class="form-label">Age</label>
+        {{ form.age(class="form-control", id="youth_age") }}
+        <div class="invalid-feedback" id="age-error"></div>
     </div>
 
+    <!-- Parent Contact Info -->
     <div class="mb-3">
-        {{ form.parent_contact_info.label(class="form-label") }}
-        {{ form.parent_contact_info(class="form-control") }}
+        <label for="youth_parent_contact_info" class="form-label">Parent/Guardian Name and Contact Information</label>
+        {{ form.parent_contact_info(class="form-control", id="youth_parent_contact_info") }}
+        <div class="invalid-feedback" id="parent_contact_info-error"></div>
     </div>
 
+    <!-- Email Field -->
     <div class="mb-3">
-        {{ form.email.label(class="form-label") }}
-        {{ form.email(class="form-control") }}
+        <label for="youth_email" class="form-label">Email Address</label>
+        {{ form.email(class="form-control", id="youth_email") }}
+        <div class="invalid-feedback" id="email-error">Please provide a valid email address.</div>
+    </div>
+    
+    <!-- About Why Design -->
+    <div class="mb-3">
+        <label for="youth_about_why_design" class="form-label">Why do you want to design a badge for Quest by Cycle?</label>
+        {{ form.about_why_design(class="form-control", id="youth_about_why_design") }}
+        <div class="invalid-feedback" id="about_why_design-error"></div>
     </div>
 
+    <!-- About Yourself -->
     <div class="mb-3">
-        {{ form.about_why_design.label(class="form-label") }}
-        {{ form.about_why_design(class="form-control") }}
+        <label for="youth_about_yourself" class="form-label">Tell us a little about yourself and your interest in art!</label>
+        {{ form.about_yourself(class="form-control", id="youth_about_yourself") }}
+        <div class="invalid-feedback" id="about_yourself-error"></div>
     </div>
 
+    <!-- Badge Selection -->
     <div class="mb-3">
-        {{ form.about_yourself.label(class="form-label") }}
-        {{ form.about_yourself(class="form-control") }}
+        <label for="youth_badge_id" class="form-label">Select a Badge</label>
+        {{ form.badge_id(class="form-select", id="youth_badge_id") }}
+        <div class="invalid-feedback" id="badge_id-error">Please select a badge.</div>
     </div>
 
+    <!-- Artwork File Upload -->
     <div class="mb-3">
-        {{ form.badge_id.label(class="form-label") }}
-        {{ form.badge_id(class="form-select") }}
-    </div>
-
-    <div class="mb-3">
-        {{ form.artwork_file.label(class="form-label") }}
-        {{ form.artwork_file(class="form-control") }}
+        <label for="youth_artwork_file" class="form-label">Upload Artwork</label>
+        {{ form.artwork_file(class="form-control", id="youth_artwork_file", accept=".jpg,.jpeg,.png,.svg") }}
+        {{ form.cached_file_path(id="youth_cached_file_path") }} <!-- Hidden field -->
+        <div class="invalid-feedback" id="youth_artwork_file-error">Please upload your artwork file.</div>
+        {% if form.cached_file_path.data %}
+            <p class="existing-file">Previously uploaded: {{ form.cached_file_path.data }}</p>
+        {% endif %}
     </div>
 
     <!-- Parent Consent -->
-    <div class="mb-3 form-check custom-checkbox">
-        {{ form.parent_consent(class_="form-check-input", id=form.parent_consent.id) }}
-        <label class="form-check-label" for="{{ form.parent_consent.id }}">
+    <div class="mb-3 form-check">
+        {{ form.parent_consent(class_="form-check-input", id="youth_parent_consent") }}
+        <label class="form-check-label" for="youth_parent_consent">
             {{ form.parent_consent.label.text }}
         </label>
+        <div class="invalid-feedback" id="parent_consent-error"></div>
         <a href="#" class="ms-2" onclick="openTermsModal(); return false;">Terms and Conditions</a>
     </div>
 
     <!-- Featured Artwork (Voluntary Opt-In) -->
-    <div class="mb-3 form-check custom-checkbox">
-        {{ form.opt_in_featured_artwork(class_="form-check-input", id=form.opt_in_featured_artwork.id) }}
-        <label class="form-check-label" for="{{ form.opt_in_featured_artwork.id }}">
+    <div class="mb-3 form-check">
+        {{ form.opt_in_featured_artwork(class_="form-check-input", id="youth_opt_in_featured_artwork") }}
+        <label class="form-check-label" for="youth_opt_in_featured_artwork">
             {{ form.opt_in_featured_artwork.label.text }}
         </label>
         <p class="form-text">
@@ -118,37 +138,14 @@
         </p>
     </div>
 
-    <div>
-        <button type="submit" class="btn btn-success mt-3">Submit Application</button>
-    </div>
+    <!-- Submit Button -->
+    <button type="submit" class="btn btn-success mt-3">Submit Application</button>
 
     {% if not submission_open and not is_admin %}
         </fieldset>
     {% endif %}
 </form>
 
-<!-- Badge Modal -->
-<div id="badgeModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h5 class="modal-title" id="badgeModalTitle">Available Badges</h5>
-            <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeBadgeModal(); return false;">×</button>
-        </div>
-        <div class="modal-body">
-            <table class="badge-table">
-                <thead>
-                    <tr>
-                        <th class="badge-name">Badge Name</th>
-                        <th class="badge-description">Description</th>
-                    </tr>
-                </thead>
-                <tbody id="badgeModalTableBody">
-                    <!-- Badge rows will be injected dynamically -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
 
 <!-- Terms and Conditions Modal -->
 <div id="termsModal" class="modal">
@@ -174,6 +171,28 @@
     </div>
 </div>
 
+<!-- Badge Modal -->
+<div id="badgeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="badgeModalTitle">Available Badges</h5>
+            <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeBadgeModal(); return false;">×</button>
+        </div>
+        <div class="modal-body">
+            <table class="badge-table">
+                <thead>
+                    <tr>
+                        <th class="badge-name">Badge Name</th>
+                        <th class="badge-description">Description</th>
+                    </tr>
+                </thead>
+                <tbody id="badgeModalTableBody">
+                    <!-- Badge rows will be injected dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
 <p>
     If you have any questions, feel free to contact us at <strong>info@QuestByCycle.org</strong>. We can’t wait to see your amazing art!
@@ -181,6 +200,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/youth_form_validation.js') }}"></script>
 <script src="{{ url_for('static', filename='js/badge_modal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/csrf.js') }}"></script>
 {% endblock %}
