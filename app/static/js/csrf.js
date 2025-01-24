@@ -2,6 +2,7 @@
 
 document.addEventListener("DOMContentLoaded", function() {
     const csrfMetaTag = document.querySelector('meta[name="csrf-token"]');
+    const csrfHiddenInput = document.querySelector('input[name="csrf_token"]');
 
     function refreshCsrfToken() {
         fetch(`${basePath}/refresh_csrf`, {
@@ -15,17 +16,30 @@ document.addEventListener("DOMContentLoaded", function() {
             return response.json();
         })
         .then(data => {
-            if (data.csrf_token && csrfMetaTag) {
-                csrfMetaTag.setAttribute('content', data.csrf_token);
-                console.log("CSRF token refreshed via meta tag.");
+            if (data.csrf_token) {
+                // Update the meta tag
+                if (csrfMetaTag) {
+                    csrfMetaTag.setAttribute('content', data.csrf_token);
+                    console.log("CSRF token refreshed via meta tag.");
+                } else {
+                    console.error("CSRF meta tag not found.");
+                }
+
+                // Update the hidden input in the form
+                if (csrfHiddenInput) {
+                    csrfHiddenInput.value = data.csrf_token;
+                    console.log("CSRF token updated in hidden input.");
+                } else {
+                    console.error("CSRF hidden input not found in the form.");
+                }
             } else {
-                console.error("CSRF token not found in response or meta tag missing.");
+                console.error("CSRF token not found in the response.");
             }
         })
         .catch(error => console.error('Error refreshing CSRF token:', error));
     }
 
-    // Set CSRF token to refresh every 15 minutes (900,000 milliseconds)
+    // Refresh CSRF token every 15 minutes (900,000 milliseconds)
     setInterval(refreshCsrfToken, 900000);
 
     // Initial CSRF token refresh on page load
