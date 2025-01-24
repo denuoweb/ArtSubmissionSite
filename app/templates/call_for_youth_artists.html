@@ -139,7 +139,9 @@
     </div>
 
     <!-- Submit Button -->
-    <button type="submit" class="btn btn-success mt-3">Submit Application</button>
+    <button type="submit" class="btn btn-success mt-3">Submit Application
+        <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true" id="youthSubmitSpinner"></span>
+    </button>
 
     {% if not submission_open and not is_admin %}
         </fieldset>
@@ -202,5 +204,6 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/youth_form_validation.js') }}"></script>
 <script src="{{ url_for('static', filename='js/badge_modal.js') }}"></script>
+<script src="{{ url_for('static', filename='js/spinner.js') }}"></script>
 <script src="{{ url_for('static', filename='js/csrf.js') }}"></script>
 {% endblock %}
