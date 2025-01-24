@@ -1,18 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h1>Ballot</h1>
+<div class="introduction mt-4">
+
+    <h2>Welcome  {{ current_user.name }} to the Judges' Ballot</h2>
+
+    <p>Please review and rank the submissions below by drag and drop. Your order is auto saved after each move. Your expertise and judgment are invaluable to this competition.</p>
+
+</div>
 
 {% if current_user.is_admin %}
     <a href="{{ url_for('admin.admin_page') }}" class="btn btn-secondary">Back to Admin Dashboard</a>
 {% endif %}
 
 <!-- Logout Form -->
-<h2>Logout</h2>
 <form method="POST" action="{{ url_for('auth.logout') }}">
     {{ logout_form.csrf_token() }}
     <button type="submit" class="btn btn-danger">Logout</button>
 </form>
+
+
+<h1>Ballot</h1>
 
 <!-- Tabs Navigation -->
 <ul class="nav nav-tabs" id="ballotTabs" role="tablist">
@@ -49,9 +57,6 @@
                 </div>
                 {% endfor %}
             </div>
-        
-            <button type="button" class="btn btn-secondary mt-3" onclick="previewRankings()">Preview Rankings</button>
-            <button type="submit" class="btn btn-primary mt-3">Submit Rankings</button>
         </form>
     </div>
 
