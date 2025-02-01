@@ -68,11 +68,12 @@
                     <td>{{ artwork.badge_name }}</td>
                     <td>
                         <a href="#" 
-                           class="artwork-thumbnail" 
-                           data-artwork-url="{{ url_for('static', filename=artwork.artwork_file) }}" 
-                           data-name="{{ artwork.artist_name }}" 
-                           data-id="{{ artwork.badge_artwork_id }}" 
-                           onclick="return false;">View Artwork</a>
+                            class="artwork-thumbnail" 
+                            data-artwork-url="{{ url_for('static', filename=artwork.artwork_file) }}" 
+                            data-name="{{ artwork.artist_name }}" 
+                            data-id="{{ artwork.artist_id }}" 
+                            data-type="artist"
+                            onclick="return false;">View Artwork</a>
                     </td>
                     <td>{{ artwork.total_score }}</td>
                     <td>
@@ -116,16 +117,17 @@
                     <td>{{ artwork.badge_name }}</td>
                     <td>
                         <a href="#" 
-                           class="artwork-thumbnail" 
-                           data-artwork-url="{{ url_for('static', filename=artwork.artwork_file) }}" 
-                           data-name="{{ artwork.artist_name }}" 
-                           data-id="{{ artwork.youth_artwork_id }}" 
-                           onclick="return false;">View Artwork</a>
+                            class="artwork-thumbnail" 
+                            data-artwork-url="{{ url_for('static', filename=artwork.artwork_file) }}" 
+                            data-name="{{ artwork.artist_name }}" 
+                            data-id="{{ artwork.youth_submission_id }}" 
+                            data-type="youth"
+                            onclick="return false;">View Artwork</a>
                     </td>
                     <td>{{ artwork.total_score }}</td>
                     <td>
                         <ul>
-                            {% for vote in judge_votes_by_youth_submission[artwork.youth_artwork_id] %}
+                            {% for vote in judge_votes_by_youth_submission[artwork.youth_submission_id] %}
                             <li>{{ vote.judge_name }}: Rank {{ vote.rank }}</li>
                             {% endfor %}
                         </ul>
