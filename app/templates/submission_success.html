@@ -13,7 +13,7 @@
             <li><strong>Phone Number:</strong> {{ submission_details.phone_number or 'N/A' }}</li>
             <li><strong>Portfolio Link:</strong> 
                 {% if submission_details.portfolio_link %}
-                    <a href="{{ submission_details.portfolio_link }}" target="_blank">{{ submission_details.portfolio_link }}</a>
+                    {{ submission_details.portfolio_link }}
                 {% else %}
                     N/A
                 {% endif %}
