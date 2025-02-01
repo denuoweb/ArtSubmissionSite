@@ -19,8 +19,8 @@
 
 <!-- Link to download all submissions as a PDF -->
 <p>
-    <a id="downloadPdf" href="#" class="btn btn-sm btn-success earth-btn">
-        Download All Submissions PDF
+    <a href="{{ url_for('admin.download_html') }}" class="btn btn-sm btn-success earth-btn">
+        Download All Submissions HTML
     </a>
 </p>
 <!-- Logout Button Section -->
@@ -31,18 +31,3 @@
 </form>
 
 {% endblock %}
-
-{% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var downloadLink = document.getElementById('downloadPdf');
-        var spinner = document.getElementById('loadingSpinner');
-    
-        downloadLink.addEventListener('click', function(e) {
-            // Show the spinner
-            spinner.style.display = 'block';
-    
-        });
-    });
-</script>
-        {% endblock %}

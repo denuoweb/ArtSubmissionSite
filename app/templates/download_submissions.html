@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Submissions Report</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .submission {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      background-color: #f0f0f0;
+      padding: 10px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .badge-artwork {
+      margin-left: 20px;
+      margin-top: 10px;
+    }
+    .badge-artwork img {
+      max-width: 300px;
+      display: block;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Submissions Report</h1>
+
+  <h2 class="section-title">General (Adult) Submissions ({{ artist_submissions|length }})</h2>
+  {% for submission in artist_submissions %}
+  <div class="submission">
+    <p><strong>Submission ID:</strong> {{ submission.id }}</p>
+    <p><strong>Created At:</strong> {{ submission.created_at }}</p>
+    <p><strong>Name:</strong> {{ submission.name }}</p>
+    <p><strong>Email:</strong> {{ submission.email }}</p>
+    <p><strong>Phone Number:</strong> {{ submission.phone_number or 'N/A' }}</p>
+    <p><strong>Artist Bio:</strong> {{ submission.artist_bio }}</p>
+    <p><strong>Statement:</strong> {{ submission.statement }}</p>
+    <p><strong>Portfolio Link:</strong> {{ submission.portfolio_link or 'N/A' }}</p>
+    <p><strong>Demographic Identity:</strong> {{ submission.demographic_identity or 'N/A' }}</p>
+    <p><strong>Lane County Connection:</strong> {{ submission.lane_county_connection or 'N/A' }}</p>
+    <p><strong>Hear About Contest:</strong> {{ submission.hear_about_contest or 'N/A' }}</p>
+    <p><strong>Future Engagement:</strong> {{ submission.future_engagement or 'N/A' }}</p>
+    <p><strong>Consent to Data:</strong> {{ submission.consent_to_data }}</p>
+    <p><strong>Opt-in Featured Artwork:</strong> {{ submission.opt_in_featured_artwork }}</p>
+    
+    <div>
+      <strong>Badge Artworks:</strong>
+      {% if submission.badge_artworks %}
+        {% for artwork in submission.badge_artworks %}
+          <div class="badge-artwork">
+            <p><strong>Badge ID:</strong> {{ artwork.badge_id }} {% if artwork.badge %}- {{ artwork.badge.name }}{% endif %}</p>
+            <p><strong>Artwork File:</strong> {{ artwork.artwork_file }}</p>
+            <p><strong>Instance:</strong> {{ artwork.instance }}</p>
+            <!-- Use an absolute URL for the image -->
+            <img src="https://questbycycle.org/static/submissions/{{ artwork.artwork_file }}" alt="Artwork Image">
+          </div>
+        {% endfor %}
+      {% else %}
+        <p>No badge artworks associated with this submission.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+
+  <h2 class="section-title">Youth Submissions ({{ youth_submissions|length }})</h2>
+  {% for submission in youth_submissions %}
+  <div class="submission">
+    <p><strong>Submission ID:</strong> {{ submission.id }}</p>
+    <p><strong>Created At:</strong> {{ submission.created_at }}</p>
+    <p><strong>Name:</strong> {{ submission.name }}</p>
+    <p><strong>Age:</strong> {{ submission.age }}</p>
+    <p><strong>Email:</strong> {{ submission.email }}</p>
+    <p><strong>Parent Contact Info:</strong> {{ submission.parent_contact_info }}</p>
+    <p><strong>About Why Design:</strong> {{ submission.about_why_design }}</p>
+    <p><strong>About Yourself:</strong> {{ submission.about_yourself }}</p>
+    <p><strong>Opt-in Featured Artwork:</strong> {{ submission.opt_in_featured_artwork }}</p>
+    <p><strong>Parent Consent:</strong> {{ submission.parent_consent }}</p>
+    
+    <div>
+      <strong>Badge Artworks:</strong>
+      {% if submission.badge_artworks %}
+        {% for artwork in submission.badge_artworks %}
+          <div class="badge-artwork">
+            <p><strong>Badge ID:</strong> {{ artwork.badge_id }} {% if artwork.badge %}- {{ artwork.badge.name }}{% endif %}</p>
+            <p><strong>Artwork File:</strong> {{ artwork.artwork_file }}</p>
+            <p><strong>Instance:</strong> {{ artwork.instance }}</p>
+            <!-- Use an absolute URL for the image -->
+            <img src="https://questbycycle.org/static/submissions/{{ artwork.artwork_file }}" alt="Artwork Image">
+          </div>
+        {% endfor %}
+      {% else %}
+        <p>No badge artworks associated with this submission.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</body>
+</html>
