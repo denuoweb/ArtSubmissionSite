@@ -13,7 +13,7 @@ function deleteSubmission(submissionId) {
     const csrfTokenValue = csrfTokenElement.value;
 
     // Construct the URL for deletion by including the "artist" submission type.
-    const deleteUrl = `${typeof basePath !== "undefined" ? basePath : ""}/judges/ballot/delete/artist/${submissionId}`;
+    const deleteUrl = `${basePath}/judges/ballot/delete/artist/${submissionId}`;
 
     // Send an asynchronous POST request to the deletion endpoint.
     fetch(deleteUrl, {
@@ -58,7 +58,7 @@ function deleteYouthSubmission(submissionId) {
     const csrfTokenValue = csrfTokenElement.value;
 
     // Construct the URL for deletion with 'youth' included in the path.
-    const deleteUrl = `/judges/ballot/delete/youth/${submissionId}`;
+    const deleteUrl = `${basePath}/judges/ballot/delete/youth/${submissionId}`;
 
     // Send an asynchronous POST request to the deletion endpoint.
     fetch(deleteUrl, {
@@ -127,7 +127,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const csrfToken = csrfTokenElement ? csrfTokenElement.value : "";
 
             // Construct the URL for deletion.
-            const deleteUrl = `${typeof basePath !== "undefined" ? basePath : ""}/judges/ballot/delete_all`;
+            const deleteUrl = `${basePath}/judges/ballot/delete_all`;
 
             fetch(deleteUrl, {
                 method: "POST",
