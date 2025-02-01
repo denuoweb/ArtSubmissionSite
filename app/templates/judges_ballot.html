@@ -53,6 +53,7 @@
                         data-artwork-url="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}"
                         data-name="{{ submission.name }}"
                         data-id="{{ submission.id }}"
+                        data-type="artist"
                     />
                 </div>
                 {% endfor %}
@@ -80,6 +81,7 @@
                         data-artwork-url="{{ url_for('static', filename='submissions/' ~ submission.artwork_file) }}"
                         data-name="{{ submission.name }}"
                         data-id="{{ submission.id }}"
+                        data-type="youth"
                     />
                 </div>
                 {% endfor %}

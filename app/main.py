@@ -286,7 +286,8 @@ def judges_ballot():
 
     # Prepare youth submissions
     saved_youth_votes = db.session.query(JudgeVote).filter_by(user_id=user_id).order_by(JudgeVote.rank).all()
-    ranked_youth_submission_ids = [vote.submission_id for vote in saved_youth_votes]
+    ranked_youth_submission_ids = [vote.youth_submission_id for vote in saved_youth_votes if vote.youth_submission_id is not None]
+
 
     if saved_youth_votes:
         logger.debug("Sorting youth submissions based on saved votes.")
