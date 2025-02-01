@@ -202,6 +202,7 @@ def judges_results():
         # Regular results query
         current_app.logger.debug("Fetching regular results data.")
         results = db.session.query(
+            ArtistSubmission.id.label("artist_id"),
             ArtistSubmission.name.label("artist_name"),
             Badge.name.label("badge_name"),
             BadgeArtwork.id.label("badge_artwork_id"),
@@ -214,7 +215,7 @@ def judges_results():
         ).join(
             Badge, Badge.id == BadgeArtwork.badge_id
         ).group_by(
-            BadgeArtwork.id, ArtistSubmission.name, Badge.name, BadgeArtwork.artwork_file
+            BadgeArtwork.id, ArtistSubmission.id, ArtistSubmission.name, Badge.name, BadgeArtwork.artwork_file
         ).order_by(
             func.coalesce(func.sum(JudgeVote.rank), 0)
         ).all()
@@ -223,18 +224,21 @@ def judges_results():
         # Youth results query
         current_app.logger.debug("Fetching youth results data.")
         youth_results = db.session.query(
+            YouthArtistSubmission.id.label("youth_submission_id"),
             YouthArtistSubmission.name.label("artist_name"),
             YouthArtistSubmission.age.label("age"),
             Badge.name.label("badge_name"),
-            YouthArtistSubmission.id.label("youth_artwork_id"),
-            YouthArtistSubmission.artwork_file.label("artwork_file"),
+            BadgeArtwork.id.label("badge_artwork_id"),
+            BadgeArtwork.artwork_file.label("artwork_file"),
             func.coalesce(func.sum(JudgeVote.rank), 0).label("total_score")
         ).join(
-            JudgeVote, YouthArtistSubmission.id == JudgeVote.submission_id, isouter=True
+            BadgeArtwork, BadgeArtwork.youth_submission_id == YouthArtistSubmission.id, isouter=True
         ).join(
-            Badge, YouthArtistSubmission.badge_id == Badge.id
+            JudgeVote, BadgeArtwork.id == JudgeVote.badge_artwork_id, isouter=True
+        ).join(
+            Badge, Badge.id == BadgeArtwork.badge_id
         ).group_by(
-            YouthArtistSubmission.id, YouthArtistSubmission.name, YouthArtistSubmission.age, Badge.name, YouthArtistSubmission.artwork_file
+            BadgeArtwork.id, YouthArtistSubmission.id, YouthArtistSubmission.name, YouthArtistSubmission.age, Badge.name, BadgeArtwork.artwork_file
         ).order_by(
             func.coalesce(func.sum(JudgeVote.rank), 0)
         ).all()
@@ -260,7 +264,7 @@ def judges_results():
         ).all()
         current_app.logger.debug(f"Youth judge votes fetched: {youth_judge_votes}")
 
-        # Processing judge votes
+        # Processing judge votes into dictionaries
         current_app.logger.debug("Processing judge votes into dictionaries.")
         judge_votes_by_artwork = {}
         for vote in judge_votes:
@@ -313,7 +317,32 @@ def judges_results():
 
     except Exception as e:
         current_app.logger.error(f"Error in judges_results route: {e}", exc_info=True)
-        return render_template("error.html", error="An error occurred while loading the results page."), 500
+        # In case of error, supply empty lists so that the template can render
+        return render_template("judges_results.html", 
+            error="An error occurred while loading the results page.",
+            results=[],
+            youth_results=[],
+            judge_votes_by_artwork={},
+            judge_votes_by_youth_submission={},
+            judges_status={}
+        ), 500
+
+
+
+@admin_bp.route("/clear_votes", methods=["POST"])
+@login_required
+@admin_required  # Ensure only admins can access this route
+def clear_votes():
+    try:
+        # Delete all JudgeVote records for all judges (both artist and youth)
+        db.session.query(JudgeVote).delete()
+        db.session.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error clearing votes: {e}", exc_info=True)
+        return jsonify({"error": "An error occurred while clearing votes."}), 500
+
 
 
 
@@ -453,19 +482,6 @@ def api_artwork_detail(submission_type, submission_id):
 
     # If no submission is found
     return jsonify({"error": "Item not found"}), 404
-
-
-@admin_bp.route("/admin/clear_votes", methods=["POST"])
-@login_required
-@admin_required
-def clear_votes():
-    try:
-        db.session.query(JudgeVote).delete()
-        db.session.commit()
-        return jsonify({"success": "All judge votes have been cleared successfully."}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": "An error occurred while clearing votes."}), 500
 
 
 @admin_bp.route("/judges/ballot/delete/<int:submission_id>", methods=["POST"])
