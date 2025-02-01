@@ -484,21 +484,25 @@ def api_artwork_detail(submission_type, submission_id):
     return jsonify({"error": "Item not found"}), 404
 
 
-@admin_bp.route("/judges/ballot/delete/<int:submission_id>", methods=["POST"])
+@admin_bp.route("/judges/ballot/delete/<submission_type>/<int:submission_id>", methods=["POST"])
 @login_required
 @admin_required
-def delete_submission(submission_id):
-    submission = ArtistSubmission.query.get_or_404(submission_id)
+def delete_submission(submission_type, submission_id):
+    if submission_type == "artist":
+        submission = ArtistSubmission.query.get_or_404(submission_id)
+    elif submission_type == "youth":
+        submission = YouthArtistSubmission.query.get_or_404(submission_id)
+    else:
+        return jsonify({"error": "Invalid submission type."}), 400
 
     try:
-        BadgeArtwork.query.filter_by(submission_id=submission.id).delete()
-
-        JudgeVote.query.filter_by(submission_id=submission.id).delete()
-
+        # Delete the submission; the related BadgeArtwork and JudgeVote records
+        # will be automatically deleted due to the cascade rules defined in your models.
         db.session.delete(submission)
         db.session.commit()
         return jsonify({"success": "Submission deleted successfully."}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Error deleting submission {submission_id}: {e}")
+        current_app.logger.error(f"Error deleting submission {submission_id}: {e}", exc_info=True)
         return jsonify({"error": "An error occurred while deleting the submission."}), 500
+

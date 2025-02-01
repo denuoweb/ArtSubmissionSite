@@ -2,7 +2,7 @@
 {% block content %}
 
 <div class="introduction mt-4">
-    <h2>Welcome {{ current_user.name }} to the Judges' Ballot</h2>
+    <h2>Welcome {{ current_user.id }} {{ current_user.name }} to the Judges' Ballot</h2>
     <p>Please review and rank the submissions below by drag and drop. Your order is auto-saved after each move. Your expertise and judgment are invaluable to this competition.</p>
 </div>
 
@@ -55,6 +55,17 @@
                         data-id="{{ submission.id }}"
                         data-type="artist"
                     />
+                    {% if current_user.is_admin %}
+                        <div class="delete-button">
+                            <form action="{{ url_for('admin.delete_submission', submission_type='artist', submission_id=submission.id) }}"
+                                method="post"
+                                class="async-delete"
+                                style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-danger btn-sm delete-btn" data-id="{{ submission.id }}">Delete</button>
+                            </form>
+                        </div>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -83,6 +94,18 @@
                         data-id="{{ submission.id }}"
                         data-type="youth"
                     />
+                    {% if current_user.is_admin %}
+                    <!-- Move the delete form outside or ensure it does not nest improperly -->
+                    <div class="youth-delete-container">
+                        <form action="{{ url_for('admin.delete_submission', submission_type='youth', submission_id=submission.id) }}"
+                              method="post"
+                              class="async-delete"
+                              style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-danger btn-sm delete-btn">Delete</button>
+                        </form>
+                    </div>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
