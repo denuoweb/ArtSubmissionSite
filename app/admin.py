@@ -1,6 +1,5 @@
 from flask import Blueprint, jsonify, render_template, flash, redirect, request, current_app,  send_file
 from flask_login import login_required, current_user
-from fpdf import FPDF
 from app.forms import LogoutForm, SubmissionDatesForm
 from app.models import SubmissionPeriod, User, Badge, db, ArtistSubmission, BadgeArtwork, JudgeVote, YouthArtistSubmission
 from app.utils import custom_url_for as url_for
