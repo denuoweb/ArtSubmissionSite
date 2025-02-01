@@ -161,10 +161,10 @@ def save_rankings_for_user(user_id, ranked_ids, form_type):
     db.session.commit()
 
 
-
 @main_bp.route("/judges/ballot", methods=["GET", "POST"])
 @login_required
 def judges_ballot():
+    import random  # Import at the top of the function if not already imported elsewhere
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
 
@@ -182,13 +182,13 @@ def judges_ballot():
     prepared_artist_submissions = []
     prepared_youth_submissions = []
 
+    # Handle POST requests (e.g., ranking submissions)
     if request.method == "POST":
         logger.debug("Received POST request.")
         if rank_form.validate_on_submit():
             logger.debug("Form validation successful.")
             form_name = request.form.get("form_name")
             rank_data = request.form.get("rank")
-
             logger.debug(f"Form name received: {form_name}")
             logger.debug(f"Ranked votes received: {rank_data}")
 
@@ -198,7 +198,6 @@ def judges_ballot():
                 return jsonify({"error": "No rankings submitted"}), 400
 
             try:
-                # Parse rankings and handle them
                 ranked_ids = rank_data.split(",")
                 logger.debug(f"Parsed ranked IDs: {ranked_ids}")
 
@@ -215,7 +214,7 @@ def judges_ballot():
             logger.warning("Form validation failed.")
             flash("Form validation failed. Please try again.", "danger")
 
-    # Retrieve saved votes
+    # Retrieve saved votes for artist submissions
     logger.debug(f"Retrieving saved votes for user_id: {user_id}")
     saved_votes = db.session.query(JudgeVote).filter_by(user_id=user_id).order_by(JudgeVote.rank).all()
     logger.debug(f"Saved votes retrieved: {saved_votes}")
@@ -240,7 +239,7 @@ def judges_ballot():
     ).distinct().all()
     logger.debug(f"Artist submissions retrieved: {len(artist_submissions)}")
 
-    # Prepare artist submissions
+    # Prepare artist submissions ordering based on saved votes (if any)
     if saved_votes:
         logger.debug("Sorting submissions based on saved votes.")
         ranked_submissions = [s for s in artist_submissions if s.id in ranked_submission_ids]
@@ -250,9 +249,9 @@ def judges_ballot():
     else:
         logger.debug("No saved votes. Preparing random order for submissions.")
         if "random_artist_order" not in session:
-            import random
+            # Initialize random_order with the current artist submission IDs
             current_ids = [s.id for s in artist_submissions]
-            random_order = [id for id in random_order if id in current_ids]
+            random_order = current_ids[:]  # make a copy of the list
             random.shuffle(random_order)
             session["random_artist_order"] = random_order
         else:
@@ -281,30 +280,22 @@ def judges_ballot():
     ).distinct().all()
     logger.debug(f"Youth submissions retrieved: {len(youth_submissions)}")
 
-    # Prepare youth submissions
-    # Retrieve only the youth-related votes for this user.
+    # Retrieve saved votes for youth submissions and prepare them
     saved_youth_votes = db.session.query(JudgeVote).filter(
         JudgeVote.user_id == user_id,
         JudgeVote.youth_submission_id.isnot(None)
     ).order_by(JudgeVote.rank).all()
-    # Get the ordered list of youth submission IDs from the votes.
     ranked_youth_submission_ids = [vote.youth_submission_id for vote in saved_youth_votes]
 
     if saved_youth_votes:
         logger.debug("Sorting youth submissions based on saved votes.")
-        # Filter the youth submissions that appear in the ranked votes.
         ranked_youth_submissions = [s for s in youth_submissions if s.id in ranked_youth_submission_ids]
-        # Sort them based on the saved ranking order.
         ranked_youth_submissions.sort(key=lambda s: ranked_youth_submission_ids.index(s.id))
-        # Determine any unranked submissions.
         unranked_youth_submissions = [s for s in youth_submissions if s.id not in ranked_youth_submission_ids]
-        # Concatenate the two lists so that ranked submissions come first.
         prepared_youth_submissions = ranked_youth_submissions + unranked_youth_submissions
     else:
         logger.debug("No saved votes for youth submissions. Preparing random order.")
-        # If no saved youth votes exist, check for a previously stored random order.
         if "random_youth_order" not in session:
-            import random
             random_youth_order = [submission.id for submission in youth_submissions]
             random.shuffle(random_youth_order)
             session["random_youth_order"] = random_youth_order
@@ -315,11 +306,11 @@ def judges_ballot():
             youth_submissions, key=lambda s: random_youth_order.index(s.id)
         )
 
-    # Later in the render_template call, pass 'prepared_youth_submissions' as youth_submissions:
+    # Render the judges ballot template with the prepared submissions
     return render_template(
         "judges_ballot.html",
         artist_submissions=prepared_artist_submissions,
-        youth_submissions=prepared_youth_submissions,  # Now in ranked order
+        youth_submissions=prepared_youth_submissions,
         rank_form=rank_form,
         logout_form=logout_form
     )
