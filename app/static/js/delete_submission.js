@@ -12,6 +12,8 @@ function deleteSubmission(submissionId) {
     }
     const csrfTokenValue = csrfTokenElement.value;
 
+    const basePath = document.querySelector('body').getAttribute('data-base-path') || "";
+
     // Construct the URL for deletion by including the "artist" submission type.
     const deleteUrl = `${basePath}/judges/ballot/delete/artist/${submissionId}`;
 
@@ -56,6 +58,8 @@ function deleteYouthSubmission(submissionId) {
         return;
     }
     const csrfTokenValue = csrfTokenElement.value;
+
+    const basePath = document.querySelector('body').getAttribute('data-base-path') || "";
 
     // Construct the URL for deletion with 'youth' included in the path.
     const deleteUrl = `${basePath}/judges/ballot/delete/youth/${submissionId}`;
@@ -125,6 +129,8 @@ document.addEventListener("DOMContentLoaded", function () {
             // Assumes that at least one form on the page includes an input[name="csrf_token"].
             const csrfTokenElement = document.querySelector('input[name="csrf_token"]');
             const csrfToken = csrfTokenElement ? csrfTokenElement.value : "";
+            
+            const basePath = document.querySelector('body').getAttribute('data-base-path') || "";
 
             // Construct the URL for deletion.
             const deleteUrl = `${basePath}/judges/ballot/delete_all`;

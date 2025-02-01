@@ -3,6 +3,7 @@
 document.addEventListener("DOMContentLoaded", function() {
     const csrfMetaTag = document.querySelector('meta[name="csrf-token"]');
     const csrfHiddenInput = document.querySelector('input[name="csrf_token"]');
+    const basePath = document.querySelector('body').getAttribute('data-base-path') || "";
 
     function refreshCsrfToken() {
         fetch(`${basePath}/refresh_csrf`, {
