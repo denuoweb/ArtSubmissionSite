@@ -295,16 +295,23 @@ def judges_ballot():
         prepared_youth_submissions = ranked_youth_submissions + unranked_youth_submissions
     else:
         logger.debug("No saved votes for youth submissions. Preparing random order.")
-        if "random_youth_order" not in session:
-            random_youth_order = [submission.id for submission in youth_submissions]
+        current_youth_ids = [s.id for s in youth_submissions]
+        # Check if stored order exists and matches the current IDs
+        if "random_youth_order" not in session or set(session["random_youth_order"]) != set(current_youth_ids):
+            random_youth_order = current_youth_ids[:]  # initialize with current IDs
             random.shuffle(random_youth_order)
             session["random_youth_order"] = random_youth_order
         else:
             random_youth_order = session["random_youth_order"]
 
-        prepared_youth_submissions = sorted(
-            youth_submissions, key=lambda s: random_youth_order.index(s.id)
-        )
+        try:
+            prepared_youth_submissions = sorted(
+                youth_submissions, key=lambda s: random_youth_order.index(s.id)
+            )
+        except ValueError as ve:
+            logger.error("Error sorting youth submissions: %s", ve, exc_info=True)
+            # Fallback: sort by id
+            prepared_youth_submissions = sorted(youth_submissions, key=lambda s: s.id)
 
     # Render the judges ballot template with the prepared submissions
     return render_template(
