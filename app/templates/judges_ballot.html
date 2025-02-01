@@ -82,7 +82,7 @@
             <input type="hidden" id="youth-rank-input" name="rank">
             <input type="hidden" name="form_name" value="youth_ranking_form">
 
-            <div id="youth-rankings-list" class="sortable-list">
+            <div id="youth-rankings-list" class="sortable-list grid-layout">
                 {% for submission in youth_submissions %}
                 <div class="rank-item" data-id="{{ submission.id }}">
                     <span class="rank-position">
