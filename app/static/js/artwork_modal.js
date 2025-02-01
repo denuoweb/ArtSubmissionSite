@@ -1,4 +1,4 @@
-function openArtworkModal(_, name, submissionId, submissionType) {
+function openArtworkModal(artworkUrl, name, submissionId, submissionType) {
     const modal = document.getElementById('artworkModal');
     const modalTitle = document.getElementById('artworkModalTitle');
     const badgeArtworkList = document.getElementById('modalBadgeArtworks');
@@ -9,6 +9,28 @@ function openArtworkModal(_, name, submissionId, submissionType) {
     // Clear the badge artwork list before loading new data
     badgeArtworkList.innerHTML = '';
   
+    // --- NEW CODE: Display the passed artwork image ---
+    let modalImageContainer = document.getElementById('modalImageContainer');
+    if (!modalImageContainer) {
+        modalImageContainer = document.createElement('div');
+        modalImageContainer.id = 'modalImageContainer';
+        modalImageContainer.classList.add('mb-3');
+        // Insert the image container at the top of the modal body
+        const modalBody = modal.querySelector('.modal-body');
+        if (modalBody) {
+            modalBody.insertBefore(modalImageContainer, modalBody.firstChild);
+        }
+    }
+    // Clear previous image (if any)
+    modalImageContainer.innerHTML = '';
+    // Create an image element using the passed artworkUrl
+    const mainImage = document.createElement('img');
+    mainImage.src = artworkUrl;
+    mainImage.alt = "Artwork";
+    mainImage.classList.add("img-fluid", "mb-3");
+    modalImageContainer.appendChild(mainImage);
+    // --- END NEW CODE ---
+  
     if (!submissionId) {
         console.error('Invalid submission ID.');
         modalTitle.textContent = "Error: Submission ID not found.";
@@ -17,8 +39,7 @@ function openArtworkModal(_, name, submissionId, submissionType) {
   
     const basePath = document.querySelector('body').getAttribute('data-base-path') || "";
   
-    // Update the fetch call to include the submission type.
-    // Assuming the API endpoint is adjusted to accept a type parameter in the URL.
+    // Continue to fetch additional artwork details from the API
     fetch(`${basePath}/api/artwork-detail/${submissionType}/${submissionId}`)
         .then(response => {
             if (!response.ok) {
@@ -31,21 +52,6 @@ function openArtworkModal(_, name, submissionId, submissionType) {
                 console.error(data.error);
                 modalTitle.textContent = "Error: Submission not found.";
                 return;
-            }
-  
-            // Populate artwork details dynamically
-            if (data.badge_artworks && data.badge_artworks.length > 0) {
-                data.badge_artworks.forEach(artwork => {
-                    const badgeItem = document.createElement('li');
-                    badgeItem.className = 'list-group-item';
-                    badgeItem.innerHTML = `<strong>Badge ${artwork.badge_id}:</strong> <img src="${artwork.artwork_file}" alt="Badge Artwork" class="img-fluid mb-3">`;
-                    badgeArtworkList.appendChild(badgeItem);
-                });
-            } else {
-                const noArtworkItem = document.createElement('li');
-                noArtworkItem.className = 'list-group-item';
-                noArtworkItem.textContent = 'No badge artworks available.';
-                badgeArtworkList.appendChild(noArtworkItem);
             }
   
             // Populate other modal fields
@@ -72,27 +78,20 @@ function openArtworkModal(_, name, submissionId, submissionType) {
     modal.style.display = 'block';
     modal.classList.add('show');
     document.body.classList.add('body-no-scroll'); // Prevent scrolling when modal is open
-  
-    // Prevent background from scrolling
     document.body.style.overflow = 'hidden';
-  }
-  
-
-function closeArtworkModal() {
-  const modal = document.getElementById('artworkModal');
-
-  // Hide the modal
-  modal.style.display = 'none';
-  modal.classList.remove('show');
-  document.body.classList.remove('body-no-scroll'); // Restore scrolling
-
-  // Restore background scrolling
-  document.body.style.overflow = '';
 }
-
-
+  
+function closeArtworkModal() {
+    const modal = document.getElementById('artworkModal');
+    // Hide the modal
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+    document.body.classList.remove('body-no-scroll');
+    document.body.style.overflow = '';
+}
+  
 document.addEventListener("DOMContentLoaded", function () {
-    // Select all elements that should open the artwork modal
+    // Attach event listeners to all artwork-thumbnail links
     const artworkThumbnails = document.querySelectorAll(".artwork-thumbnail");
   
     artworkThumbnails.forEach((thumbnail) => {
@@ -101,11 +100,10 @@ document.addEventListener("DOMContentLoaded", function () {
             const imageUrl = event.target.dataset.artworkUrl;
             const name = event.target.dataset.name;
             const submissionId = event.target.dataset.id;
-            const submissionType = event.target.dataset.type; // new
+            const submissionType = event.target.dataset.type; // new parameter
   
-            // Call the modal logic with the type passed along
+            // Call the modal logic with the dynamic imageUrl passed along
             openArtworkModal(imageUrl, name, submissionId, submissionType);
         });
     });
 });
-  
