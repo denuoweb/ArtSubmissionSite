@@ -124,18 +124,58 @@
             <button type="button" class="custom-close-btn" aria-label="Close" onclick="closeArtworkModal(); return false;">×</button>
         </div>
         <div class="modal-body">
+            <!-- The image container will be dynamically inserted here -->
             <ul class="list-group">
-                <li class="list-group-item"><strong>Submitter Name:</strong> <span id="modalSubmitterName"></span></li>
-                <li class="list-group-item"><strong>Email:</strong> <span id="modalEmail"></span></li>
-                <li class="list-group-item"><strong>Artist Bio:</strong> <span id="modalArtistBio"></span></li>
-                <li class="list-group-item"><strong>Portfolio Link:</strong> <a id="modalPortfolioLink" href="" target="_blank"></a></li>
-                <li class="list-group-item"><strong>Statement:</strong> <span id="modalStatement"></span></li>
-                <li class="list-group-item"><strong>Demographic Identity:</strong> <span id="modalDemographic"></span></li>
-                <li class="list-group-item"><strong>Lane County Connection:</strong> <span id="modalLaneCounty"></span></li>
-                <li class="list-group-item"><strong>Accessibility Needs:</strong> <span id="modalAccessibility"></span></li>
-                <li class="list-group-item"><strong>Future Engagement:</strong> <span id="modalFutureEngagement"></span></li>
                 <li class="list-group-item">
-                    <strong>Opt-In to Feature All Submitted Artwork?</strong>
+                    <strong>Submitter Name:</strong> <span id="modalSubmitterName"></span>
+                </li>
+                <li class="list-group-item">
+                    <strong>Email:</strong> <span id="modalEmail"></span>
+                </li>
+
+                <!-- Adult-specific fields (initially hidden) -->
+                <li class="list-group-item" style="display: none;">
+                    <strong>Artist Bio:</strong> <span id="modalArtistBio"></span>
+                </li>
+                <li class="list-group-item" style="display: none;">
+                    <strong>Portfolio Link:</strong> <a id="modalPortfolioLink" href="" target="_blank"></a>
+                </li>
+                <li class="list-group-item" style="display: none;">
+                    <strong>Statement:</strong> <span id="modalStatement"></span>
+                </li>
+                <li class="list-group-item" style="display: none;">
+                    <strong>Demographic Identity:</strong> <span id="modalDemographic"></span>
+                </li>
+                <li class="list-group-item" style="display: none;">
+                    <strong>Lane County Connection:</strong> <span id="modalLaneCounty"></span>
+                </li>
+                <li class="list-group-item" style="display: none;">
+                    <strong>Accessibility Needs:</strong> <span id="modalAccessibility"></span>
+                </li>
+                <li class="list-group-item" style="display: none;">
+                    <strong>Future Engagement:</strong> <span id="modalFutureEngagement"></span>
+                </li>
+
+                <!-- Youth-specific fields (initially hidden) -->
+                <li class="list-group-item" style="display: none;">
+                    <strong>Age:</strong> <span id="modalAge"></span>
+                </li>
+                <li class="list-group-item" style="display: none;">
+                    <strong>Parent/Guardian Contact Info:</strong> <span id="modalParentContactInfo"></span>
+                </li>
+                <li class="list-group-item" style="display: none;">
+                    <strong>About Why You Designed:</strong> <span id="modalAboutWhyDesign"></span>
+                </li>
+                <li class="list-group-item" style="display: none;">
+                    <strong>About Yourself:</strong> <span id="modalAboutYourself"></span>
+                </li>
+                <li class="list-group-item" style="display: none;">
+                    <strong>Parent/Guardian Consent:</strong> <span id="modalParentConsent"></span>
+                </li>
+
+                <!-- Common opt-in field -->
+                <li class="list-group-item">
+                    <strong>Opt-In to Feature Submitted Artwork?</strong>
                     <span id="modalFeaturedOptIn"></span>
                 </li>
             </ul>
@@ -143,6 +183,7 @@
         </div>
     </div>
 </div>
+
 
 {% endblock %}
 
