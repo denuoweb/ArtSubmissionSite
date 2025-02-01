@@ -115,22 +115,23 @@ def get_rank_suffix(rank):
     return "th"
 
 
-def save_rankings_for_user(user_id, ranked_ids):
+def save_rankings_for_user(user_id, ranked_ids, form_type):
     rank = 1
     with db.session.begin_nested():
-        db.session.query(JudgeVote).filter_by(user_id=user_id).delete()
+        # Delete only the votes for the given submission type.
+        if form_type == "youth_ranking_form":
+            db.session.query(JudgeVote).filter_by(user_id=user_id, submission_id=None).delete()
+        else:  # Assume "ranking_form" for adult submissions.
+            db.session.query(JudgeVote).filter_by(user_id=user_id, youth_submission_id=None).delete()
 
         for sub_id in ranked_ids:
-            # 1) Check if sub_id is an adult submission
+            # 1) Check if sub_id is an adult submission.
             adult_sub = ArtistSubmission.query.get(sub_id)
             if adult_sub is not None:
-                # It's an adult submission
-                # Retrieve the matching BadgeArtwork row(s)
-                # Usually, you'll pick the "first" or handle multiples
+                # It's an adult submission.
                 artwork = BadgeArtwork.query.filter_by(submission_id=sub_id).first()
                 if not artwork:
                     raise ValueError(f"No BadgeArtwork found for ADULT submission {sub_id}")
-                
                 vote = JudgeVote(
                     user_id=user_id,
                     submission_id=sub_id,
@@ -138,16 +139,13 @@ def save_rankings_for_user(user_id, ranked_ids):
                     badge_artwork_id=artwork.id,
                     rank=rank
                 )
-            
             else:
-                # 2) Otherwise, check if sub_id is a youth submission
+                # 2) Otherwise, check if sub_id is a youth submission.
                 youth_sub = YouthArtistSubmission.query.get(sub_id)
                 if youth_sub is not None:
-                    # It's a youth submission
                     artwork = BadgeArtwork.query.filter_by(youth_submission_id=sub_id).first()
                     if not artwork:
                         raise ValueError(f"No BadgeArtwork found for YOUTH submission {sub_id}")
-                    
                     vote = JudgeVote(
                         user_id=user_id,
                         submission_id=None,
@@ -156,12 +154,10 @@ def save_rankings_for_user(user_id, ranked_ids):
                         rank=rank
                     )
                 else:
-                    # 3) Not found in either ArtistSubmission or YouthArtistSubmission
+                    # 3) Not found in either table.
                     raise ValueError(f"Submission ID {sub_id} not found in adult or youth tables!")
-
             db.session.add(vote)
             rank += 1
-
     db.session.commit()
 
 
@@ -207,7 +203,7 @@ def judges_ballot():
                 logger.debug(f"Parsed ranked IDs: {ranked_ids}")
 
                 # Save rankings to the database for the current user
-                save_rankings_for_user(user_id, ranked_ids)
+                save_rankings_for_user(user_id, ranked_ids, form_name)
 
                 flash("Rankings submitted successfully!", "success")
                 return jsonify({"success": True}), 200
@@ -285,18 +281,27 @@ def judges_ballot():
     logger.debug(f"Youth submissions retrieved: {len(youth_submissions)}")
 
     # Prepare youth submissions
-    saved_youth_votes = db.session.query(JudgeVote).filter_by(user_id=user_id).order_by(JudgeVote.rank).all()
-    ranked_youth_submission_ids = [vote.youth_submission_id for vote in saved_youth_votes if vote.youth_submission_id is not None]
-
+    # Retrieve only the youth-related votes for this user.
+    saved_youth_votes = db.session.query(JudgeVote).filter(
+        JudgeVote.user_id == user_id,
+        JudgeVote.youth_submission_id.isnot(None)
+    ).order_by(JudgeVote.rank).all()
+    # Get the ordered list of youth submission IDs from the votes.
+    ranked_youth_submission_ids = [vote.youth_submission_id for vote in saved_youth_votes]
 
     if saved_youth_votes:
         logger.debug("Sorting youth submissions based on saved votes.")
+        # Filter the youth submissions that appear in the ranked votes.
         ranked_youth_submissions = [s for s in youth_submissions if s.id in ranked_youth_submission_ids]
+        # Sort them based on the saved ranking order.
         ranked_youth_submissions.sort(key=lambda s: ranked_youth_submission_ids.index(s.id))
+        # Determine any unranked submissions.
         unranked_youth_submissions = [s for s in youth_submissions if s.id not in ranked_youth_submission_ids]
+        # Concatenate the two lists so that ranked submissions come first.
         prepared_youth_submissions = ranked_youth_submissions + unranked_youth_submissions
     else:
         logger.debug("No saved votes for youth submissions. Preparing random order.")
+        # If no saved youth votes exist, check for a previously stored random order.
         if "random_youth_order" not in session:
             import random
             random_youth_order = [submission.id for submission in youth_submissions]
@@ -309,15 +314,14 @@ def judges_ballot():
             youth_submissions, key=lambda s: random_youth_order.index(s.id)
         )
 
-    logger.debug("Rendering judges ballot template.")
+    # Later in the render_template call, pass 'prepared_youth_submissions' as youth_submissions:
     return render_template(
         "judges_ballot.html",
         artist_submissions=prepared_artist_submissions,
-        youth_submissions=prepared_youth_submissions,
+        youth_submissions=prepared_youth_submissions,  # Now in ranked order
         rank_form=rank_form,
         logout_form=logout_form
     )
-
 
 
 @main_bp.route("/call_for_artists", methods=["GET", "POST"])
