@@ -534,6 +534,16 @@ button:focus-visible {
     padding: 0;
     list-style: none;
 }
+
+#youth-rankings-list {
+    display: flex;
+    flex-wrap: wrap; /* Wrap items to the next row if needed */
+    gap: 1rem; /* Add spacing between items */
+    justify-content: center; /* Center items horizontally */
+    padding: 0;
+    list-style: none;
+}
+
 .thumbnail-container {
     max-width: 200px; /* Limit the width of the thumbnail */
     flex-shrink: 0; /* Prevent the thumbnail from shrinking */
