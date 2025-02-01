@@ -1,5 +1,6 @@
-from flask import Blueprint, jsonify, render_template, flash, redirect, request, current_app
+from flask import Blueprint, jsonify, render_template, flash, redirect, request, current_app,  send_file
 from flask_login import login_required, current_user
+from fpdf import FPDF
 from app.forms import LogoutForm, SubmissionDatesForm
 from app.models import SubmissionPeriod, User, Badge, db, ArtistSubmission, BadgeArtwork, JudgeVote, YouthArtistSubmission
 from app.utils import custom_url_for as url_for
@@ -11,6 +12,8 @@ from functools import wraps
 from zoneinfo import ZoneInfo
 
 import csv
+import io
+import os
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -506,3 +509,198 @@ def delete_submission(submission_type, submission_id):
         current_app.logger.error(f"Error deleting submission {submission_id}: {e}", exc_info=True)
         return jsonify({"error": "An error occurred while deleting the submission."}), 500
 
+
+@admin_bp.route("/admin/download-submissions", methods=["GET"])
+@login_required
+@admin_required
+def download_submissions():
+    """
+    Generate a PDF containing all adult and youth submissions with all model fields,
+    including associated badge artwork records and displaying the artwork images.
+    """
+    try:
+        # Query all submissions
+        artist_submissions = ArtistSubmission.query.order_by(ArtistSubmission.created_at).all()
+        youth_submissions = YouthArtistSubmission.query.order_by(YouthArtistSubmission.created_at).all()
+
+        # Initialize PDF document
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        
+        # --- Cover Page ---
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 20)
+        pdf.cell(0, 10, "Submissions Report", ln=True, align="C")
+        pdf.ln(10)
+        pdf.set_font("Arial", "", 12)
+        pdf.cell(0, 10, f"Total Adult Submissions: {len(artist_submissions)}", ln=True)
+        pdf.cell(0, 10, f"Total Youth Submissions: {len(youth_submissions)}", ln=True)
+        pdf.ln(10)
+
+        # Helper function to add artwork images
+        def add_artwork_image(image_file):
+            """
+            Insert the artwork image into the PDF if the image file exists.
+            The image is expected to reside in the static/submissions folder.
+            """
+            image_path = os.path.join(current_app.root_path, "static", "submissions", image_file)
+            if os.path.exists(image_path):
+                try:
+                    # Save current cursor position (optional adjustment)
+                    x = pdf.get_x()
+                    y = pdf.get_y()
+                    # Insert image with a width of 50 mm; adjust height automatically
+                    pdf.image(image_path, x=x, y=y, w=50)
+                    # Move below the image (add some vertical space)
+                    pdf.ln(55)
+                except Exception as img_ex:
+                    pdf.cell(0, 10, f"Error displaying image: {img_ex}", ln=True)
+            else:
+                pdf.cell(0, 10, "Artwork image not found.", ln=True)
+
+        # --- Adult (General) Submissions ---
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 16)
+        pdf.cell(0, 10, "General (Adult) Submissions", ln=True)
+        pdf.ln(5)
+        pdf.set_font("Arial", "", 12)
+        
+        if artist_submissions:
+            for submission in artist_submissions:
+                pdf.add_page()
+                pdf.set_font("Arial", "B", 14)
+                pdf.cell(0, 10, f"Submission ID: {submission.id}", ln=True)
+                pdf.set_font("Arial", "", 12)
+                pdf.cell(0, 10, f"Created At: {submission.created_at}", ln=True)
+                pdf.cell(0, 10, f"Name: {submission.name}", ln=True)
+                pdf.cell(0, 10, f"Email: {submission.email}", ln=True)
+                pdf.cell(0, 10, f"Phone Number: {submission.phone_number or 'N/A'}", ln=True)
+                pdf.ln(2)
+                pdf.multi_cell(0, 10, f"Artist Bio: {submission.artist_bio}")
+                pdf.ln(1)
+                pdf.multi_cell(0, 10, f"Statement: {submission.statement}")
+                pdf.ln(1)
+                pdf.cell(0, 10, f"Portfolio Link: {submission.portfolio_link or 'N/A'}", ln=True)
+                pdf.ln(1)
+                pdf.multi_cell(0, 10, f"Demographic Identity: {submission.demographic_identity or 'N/A'}")
+                pdf.ln(1)
+                pdf.multi_cell(0, 10, f"Lane County Connection: {submission.lane_county_connection or 'N/A'}")
+                pdf.ln(1)
+                pdf.multi_cell(0, 10, f"Hear About Contest: {submission.hear_about_contest or 'N/A'}")
+                pdf.ln(1)
+                pdf.multi_cell(0, 10, f"Future Engagement: {submission.future_engagement or 'N/A'}")
+                pdf.ln(1)
+                pdf.cell(0, 10, f"Consent to Data: {submission.consent_to_data}", ln=True)
+                pdf.cell(0, 10, f"Opt-in Featured Artwork: {submission.opt_in_featured_artwork}", ln=True)
+                pdf.ln(5)
+                pdf.cell(0, 10, "Badge Artworks:", ln=True)
+                pdf.ln(2)
+                
+                if submission.badge_artworks:
+                    for artwork in submission.badge_artworks:
+                        pdf.set_font("Arial", "B", 12)
+                        # Include badge ID and badge name (if the badge relation is loaded)
+                        badge_info = f"Badge ID: {artwork.badge_id}"
+                        if hasattr(artwork, "badge") and artwork.badge is not None:
+                            badge_info += f" - {artwork.badge.name}"
+                        pdf.cell(0, 10, badge_info, ln=True)
+                        pdf.set_font("Arial", "", 12)
+                        pdf.cell(0, 10, f"Artwork File: {artwork.artwork_file}", ln=True)
+                        pdf.cell(0, 10, f"Instance: {artwork.instance}", ln=True)
+                        pdf.ln(2)
+                        # Display the artwork image
+                        add_artwork_image(artwork.artwork_file)
+                        pdf.ln(5)
+                else:
+                    pdf.cell(0, 10, "No badge artworks associated with this submission.", ln=True)
+                pdf.ln(10)
+        else:
+            pdf.cell(0, 10, "No general submissions found.", ln=True)
+
+        # --- Youth Submissions ---
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 16)
+        pdf.cell(0, 10, "Youth Submissions", ln=True)
+        pdf.ln(5)
+        pdf.set_font("Arial", "", 12)
+        
+        if youth_submissions:
+            for submission in youth_submissions:
+                pdf.add_page()
+                pdf.set_font("Arial", "B", 14)
+                pdf.cell(0, 10, f"Submission ID: {submission.id}", ln=True)
+                pdf.set_font("Arial", "", 12)
+                pdf.cell(0, 10, f"Created At: {submission.created_at}", ln=True)
+                pdf.cell(0, 10, f"Name: {submission.name}", ln=True)
+                pdf.cell(0, 10, f"Age: {submission.age}", ln=True)
+                pdf.cell(0, 10, f"Email: {submission.email}", ln=True)
+                pdf.ln(2)
+                pdf.multi_cell(0, 10, f"Parent Contact Info: {submission.parent_contact_info}")
+                pdf.ln(1)
+                pdf.multi_cell(0, 10, f"About Why Design: {submission.about_why_design}")
+                pdf.ln(1)
+                pdf.multi_cell(0, 10, f"About Yourself: {submission.about_yourself}")
+                pdf.ln(1)
+                pdf.cell(0, 10, f"Opt-in Featured Artwork: {submission.opt_in_featured_artwork}", ln=True)
+                pdf.cell(0, 10, f"Parent Consent: {submission.parent_consent}", ln=True)
+                pdf.ln(5)
+                pdf.cell(0, 10, "Badge Artworks:", ln=True)
+                pdf.ln(2)
+                if submission.badge_artworks:
+                    for artwork in submission.badge_artworks:
+                        pdf.set_font("Arial", "B", 12)
+                        badge_info = f"Badge ID: {artwork.badge_id}"
+                        if hasattr(artwork, "badge") and artwork.badge is not None:
+                            badge_info += f" - {artwork.badge.name}"
+                        pdf.cell(0, 10, badge_info, ln=True)
+                        pdf.set_font("Arial", "", 12)
+                        pdf.cell(0, 10, f"Artwork File: {artwork.artwork_file}", ln=True)
+                        pdf.cell(0, 10, f"Instance: {artwork.instance}", ln=True)
+                        pdf.ln(2)
+                        add_artwork_image(artwork.artwork_file)
+                        pdf.ln(5)
+                else:
+                    pdf.cell(0, 10, "No badge artworks associated with this submission.", ln=True)
+                pdf.ln(10)
+        else:
+            pdf.cell(0, 10, "No youth submissions found.", ln=True)
+
+        # Write the PDF output to a bytes buffer and return as a download
+        pdf_string = pdf.output(dest="S")  # 'S' means output as a string
+        pdf_bytes = pdf_string.encode("latin1")  # Encoding using latin1 is recommended for PDF output
+        pdf_buffer = io.BytesIO(pdf_bytes)
+        pdf_buffer.seek(0)
+
+        return send_file(
+            pdf_buffer,
+            as_attachment=True,
+            download_name="submissions_full.pdf",
+            mimetype="application/pdf"
+        )
+    except Exception as e:
+        current_app.logger.error(f"Error generating submissions PDF: {e}", exc_info=True)
+        return "An error occurred while generating the PDF.", 500
+    
+
+@admin_bp.route("/judges/ballot/delete_all", methods=["POST"])
+@login_required
+@admin_required
+def delete_all_submissions():
+    """
+    Deletes all artist and youth submissions along with their associated BadgeArtwork and JudgeVote records.
+    """
+    try:
+        # Delete all JudgeVote records (if not handled by cascading deletes)
+        JudgeVote.query.delete()
+        # Delete all BadgeArtwork records
+        BadgeArtwork.query.delete()
+        # Delete all Artist Submissions
+        ArtistSubmission.query.delete()
+        # Delete all Youth Submissions
+        YouthArtistSubmission.query.delete()
+        db.session.commit()
+        return jsonify({"success": "All submissions deleted successfully."}), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting all submissions: {e}", exc_info=True)
+        return jsonify({"error": "An error occurred while deleting all submissions."}), 500

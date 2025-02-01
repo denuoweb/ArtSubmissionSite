@@ -11,6 +11,18 @@
 <p><a href="{{ url_for('admin.manage_judges') }}" class="btn btn-sm btn-success earth-btn">Manage Judges</a></p><br>
 <p><a href="{{ url_for('admin.update_submission_dates') }}" class="btn btn-sm btn-success earth-btn">Update Submission Dates</a></p><br>
 
+<!-- Spinner container (initially hidden) -->
+<div id="loadingSpinner" style="display: none; position: fixed; top: 40%; left: 45%; z-index: 1000;">
+    <img src="{{ url_for('static', filename='images/spinner.gif') }}" alt="Loading..." />
+    <p>Generating PDF, please wait a few minutes...</p>
+</div>
+
+<!-- Link to download all submissions as a PDF -->
+<p>
+    <a id="downloadPdf" href="#" class="btn btn-sm btn-success earth-btn">
+        Download All Submissions PDF
+    </a>
+</p>
 <!-- Logout Button Section -->
 <h2>Logout</h2>
 <form id="logout_form" method="POST" action="{{ url_for('auth.logout') }}">
@@ -19,3 +31,18 @@
 </form>
 
 {% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var downloadLink = document.getElementById('downloadPdf');
+        var spinner = document.getElementById('loadingSpinner');
+    
+        downloadLink.addEventListener('click', function(e) {
+            // Show the spinner
+            spinner.style.display = 'block';
+    
+        });
+    });
+</script>
+        {% endblock %}
