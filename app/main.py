@@ -251,14 +251,15 @@ def judges_ballot():
         logger.debug("No saved votes. Preparing random order for submissions.")
         if "random_artist_order" not in session:
             import random
-            random_order = [submission.id for submission in artist_submissions]
+            current_ids = [s.id for s in artist_submissions]
+            random_order = [id for id in random_order if id in current_ids]
             random.shuffle(random_order)
             session["random_artist_order"] = random_order
         else:
             random_order = session["random_artist_order"]
 
         prepared_artist_submissions = sorted(
-            artist_submissions, key=lambda s: random_order.index(s.id)
+            artist_submissions, key=lambda s: random_order.index(s.id) if s.id in random_order else float('inf')
         )
 
     # Retrieve youth submissions
