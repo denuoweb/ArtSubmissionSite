@@ -8,8 +8,11 @@
 
 {% if current_user.is_admin %}
     <a href="{{ url_for('admin.admin_page') }}" class="btn btn-secondary">Back to Admin Dashboard</a>
+    <div class="delete-all-container mt-3">
+        <button id="delete-all-btn" class="btn btn-danger">Delete All Submissions</button>
+    </div>
 {% endif %}
-
+ <br>
 <!-- Logout Form -->
 <form method="POST" action="{{ url_for('auth.logout') }}">
     {{ logout_form.csrf_token() }}

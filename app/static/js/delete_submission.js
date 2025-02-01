@@ -109,3 +109,49 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 });
+
+document.addEventListener("DOMContentLoaded", function () {
+    // Find the "Delete All Submissions" button by its ID.
+    const deleteAllBtn = document.getElementById("delete-all-btn");
+
+    if (deleteAllBtn) {
+        deleteAllBtn.addEventListener("click", function (event) {
+            event.preventDefault();
+            if (!confirm("Are you sure you want to delete ALL submissions? This action cannot be undone.")) {
+                return;
+            }
+
+            // Retrieve the CSRF token from a hidden input element.
+            // Assumes that at least one form on the page includes an input[name="csrf_token"].
+            const csrfTokenElement = document.querySelector('input[name="csrf_token"]');
+            const csrfToken = csrfTokenElement ? csrfTokenElement.value : "";
+
+            // Construct the URL for deletion.
+            const deleteUrl = `${typeof basePath !== "undefined" ? basePath : ""}/judges/ballot/delete_all`;
+
+            fetch(deleteUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken,
+                },
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    if (data.success) {
+                        alert(data.success);
+                        // Remove all submission elements from the DOM.
+                        document.querySelectorAll(".rank-item").forEach(function (item) {
+                            item.remove();
+                        });
+                    } else {
+                        alert(data.error || "An error occurred while deleting all submissions.");
+                    }
+                })
+                .catch((error) => {
+                    console.error("Error during deletion of all submissions:", error);
+                    alert("An error occurred while trying to delete all submissions.");
+                });
+        });
+    }
+});
