@@ -53,6 +53,8 @@ document.addEventListener("DOMContentLoaded", () => {
             // Retrieve CSRF token from meta tag
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
+            const basePath = document.querySelector('body').getAttribute('data-base-path') || "";
+
             const response = await fetch(`${basePath}/api/check-youth-email`, {
                 method: "POST",
                 headers: {
