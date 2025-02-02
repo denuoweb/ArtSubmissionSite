@@ -54,9 +54,10 @@ function openArtworkModal(artworkUrl, name, submissionId, submissionType) {
             // Reset common fields
             document.getElementById('modalSubmitterName').textContent = "";
             document.getElementById('modalEmail').textContent = "";
+            document.getElementById('modalPhoneNumber').textContent = data.phone_number || "N/A";
 
             // Define arrays for fields unique to each submission type.
-            const adultFields = ['modalArtistBio', 'modalPortfolioLink', 'modalStatement', 'modalDemographic', 'modalLaneCounty', 'modalAccessibility', 'modalFutureEngagement'];
+            const adultFields = ['modalArtistBio', 'modalPortfolioLink', 'modalStatement', 'modalDemographic', 'modalLaneCounty', 'modalHeard', 'modalFutureEngagement'];
             const youthFields = ['modalAge', 'modalParentContactInfo', 'modalAboutWhyDesign', 'modalAboutYourself', 'modalParentConsent'];
 
             // Hide all optional fields to start clean.
@@ -112,6 +113,11 @@ function openArtworkModal(artworkUrl, name, submissionId, submissionType) {
                     artistBioElem.textContent = data.artist_bio;
                     artistBioElem.parentElement.style.display = '';
                 }
+                const artistPhoneElem = document.getElementById('modalPhoneNumber');
+                if (artistPhoneElem) {
+                    artistPhoneElem.textContent = data.phone_number;
+                    artistPhoneElem.parentElement.style.display = '';
+                }
                 const portfolioLinkElem = document.getElementById('modalPortfolioLink');
                 if (portfolioLinkElem) {
                     portfolioLinkElem.textContent = data.portfolio_link || 'N/A';
@@ -133,10 +139,10 @@ function openArtworkModal(artworkUrl, name, submissionId, submissionType) {
                     laneCountyElem.textContent = data.lane_county_connection || 'N/A';
                     laneCountyElem.parentElement.style.display = '';
                 }
-                const accessibilityElem = document.getElementById('modalAccessibility');
-                if (accessibilityElem) {
-                    accessibilityElem.textContent = data.hear_about_contest || 'N/A';
-                    accessibilityElem.parentElement.style.display = '';
+                const heardElem = document.getElementById('modalHeard');
+                if (heardElem) {
+                    heardElem.textContent = data.hear_about_contest || 'N/A';
+                    heardElem.parentElement.style.display = '';
                 }
                 const futureEngagementElem = document.getElementById('modalFutureEngagement');
                 if (futureEngagementElem) {

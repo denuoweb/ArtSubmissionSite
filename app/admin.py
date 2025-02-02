@@ -427,6 +427,7 @@ def api_artwork_detail(submission_type, submission_id):
                 "type": "adult",
                 "name": submission.name,
                 "email": submission.email,
+                "phone_number": submission.phone_number,
                 "artist_bio": submission.artist_bio,
                 "portfolio_link": submission.portfolio_link,
                 "statement": submission.statement,

@@ -29,7 +29,7 @@ class ArtistSubmission(db.Model):
     statement = db.Column(db.Text, nullable=False)  # Artist's statement of interest
     demographic_identity = db.Column(db.Text, nullable=True)  # Optional demographic information
     lane_county_connection = db.Column(db.Text, nullable=True)  # Connection to Lane County
-    hear_about_contest = db.Column(db.Text, nullable=True)  # Accessibility needs
+    hear_about_contest = db.Column(db.Text, nullable=True)
     future_engagement = db.Column(db.Text, nullable=True)  # Interest in future engagement
     consent_to_data = db.Column(db.Boolean, nullable=False, default=False)  # Consent to data usage
     opt_in_featured_artwork = db.Column(db.Boolean, nullable=False, default=False)  # Opt-in for featuring artwork
