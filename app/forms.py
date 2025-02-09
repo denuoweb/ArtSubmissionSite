@@ -71,10 +71,10 @@ class ArtistSubmissionForm(FlaskForm):  # Form corrections and updates
         render_kw={"placeholder": "Enter your phone number"}
     )
     artist_bio = TextAreaField(
-        "Artist Bio (1,000 to 2,500 characters)",
+        "Artist Bio (300 to 2,500 characters)",
         validators=[
             DataRequired(message="Please provide a brief artist bio."),
-            Length(min=1000, max=2500, message="Bio must be between 1,000 to 2,500 characters.")
+            Length(min=300, max=2500, message="Bio must be between 300 to 2,500 characters.")
         ],
         render_kw={"placeholder": "Write a brief bio about yourself."}
     )
@@ -87,10 +87,10 @@ class ArtistSubmissionForm(FlaskForm):  # Form corrections and updates
         render_kw={"placeholder": "Provide a link to your online portfolio (if available)"}
     )
     statement = TextAreaField(
-        "Statement of Interest (1,000 to 2,500 characters)",
+        "Statement of Interest (300 to 2,500 characters)",
         validators=[
             DataRequired(message="Please provide your statement of interest."),
-            Length(min=1000, max=2500, message="Statement must be between 1,000 to 2,500 characters.")
+            Length(min=300, max=2500, message="Statement must be between 300 to 2,500 characters.")
         ],
         render_kw={"placeholder": "Why do you want to contribute? How does your work reflect bicycling?"}
     )
