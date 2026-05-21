@@ -236,3 +236,11 @@ ArtSubmissionSite/
 ## License
 
 This project is licensed under the MIT License. See LICENSE for details.
+
+## Portfolio Case Study
+
+This repository is part of Jaron Rosenau's implementation, developer-support, and integration engineering portfolio. The public case study summarizes the problem, delivery scope, architecture, and operational result.
+
+- Case study: [Art Submission Site implementation case study](https://rosenau.info/projects/osVQLYajLvH6jK84iwRK)
+- Full portfolio: [Jaron Rosenau](https://rosenau.info)
+- Summary: Submission and judging workflow for QuestByCycle badge artwork with admin and file-handling concerns.
